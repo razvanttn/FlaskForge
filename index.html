@@ -4,1133 +4,554 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Flask session cookie decoder, encoder and secret key cracker. CTF tool for pentesters.">
-<meta name="keywords" content="flask cookie decoder, flask session cookie, flask secret key cracker, CTF tool, pentest, flask encode cookie, secret brutefroce flask">
-<title>FlaskForge — Flask Session Cookie Tool</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<meta name="keywords" content="flask cookie decoder, flask session cookie, flask secret key cracker, CTF tool, pentest, flask encode cookie, flask secret bruteforce">
+<title>FlaskForge</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script data-goatcounter="https://razvanttn.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --surface2: #1a1a24;
-    --border: #2a2a3a;
-    --accent: #7c6af7;
-    --accent2: #4fd1c5;
-    --accent3: #f6ad55;
-    --text: #e8e8f0;
-    --muted: #6b6b80;
-    --success: #48bb78;
-    --danger: #fc8181;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'Syne', sans-serif;
-  }
+:root {
+  --bg: #111;
+  --surface: #1a1a1a;
+  --border: #2c2c2c;
+  --accent: #e8e8e8;
+  --text: #c8c8c8;
+  --muted: #555;
+  --green: #4a9;
+  --red: #c55;
+  --yellow: #ca6;
+  --mono: 'JetBrains Mono', monospace;
+}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.5;
+}
 
-  /* Background grid */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(124,106,247,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(124,106,247,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 28px 80px;
+}
 
-  /* Glow blobs */
-  body::after {
-    content: '';
-    position: fixed;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(124,106,247,0.08) 0%, transparent 70%);
-    top: -200px; left: -200px;
-    pointer-events: none;
-    z-index: 0;
-  }
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
 
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 24px 80px;
-    position: relative;
-    z-index: 1;
-  }
+.site-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.3px;
+}
 
-  /* Header */
-  header {
-    padding: 48px 0 40px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 48px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
+.site-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-left: 12px;
+}
 
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+.gh-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.15s;
+}
+.gh-link:hover { color: var(--text); }
 
-  .logo-icon {
-    width: 40px; height: 40px;
-    background: var(--accent);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-  }
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 24px;
+}
 
-  h1 {
-    font-size: 28px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    color: var(--text);
-  }
+.tab {
+  padding: 10px 18px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--accent);
+}
 
-  h1 span {
-    color: var(--accent);
-  }
+.panel { display: none; }
+.panel.active { display: flex; flex-direction: column; gap: 14px; }
 
-  .tagline {
-    font-size: 13px;
-    color: var(--muted);
-    font-family: var(--mono);
-    margin-top: 2px;
-  }
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 5px;
+}
 
-  .badge {
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
+textarea, input[type=text], input[type=password] {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+  line-height: 1.6;
+}
+textarea { min-height: 100px; }
+textarea:focus, input:focus { border-color: #444; }
 
-  /* Tabs */
-  .tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 4px;
-    margin-bottom: 32px;
-    width: fit-content;
-  }
+.key-wrap { position: relative; }
+.key-wrap input { padding-right: 36px; }
+.vis-btn {
+  position: absolute; right: 8px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none;
+  color: var(--muted); cursor: pointer; font-size: 15px;
+}
+.vis-btn:hover { color: var(--text); }
 
-  .tab {
-    padding: 8px 24px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    font-family: var(--sans);
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.3px;
-  }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-  .tab.active {
-    background: var(--accent);
-    color: #fff;
-  }
+.btn {
+  padding: 10px 18px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-p { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
+.btn-p:hover { opacity: 0.88; }
+.btn-s { background: transparent; color: var(--muted); }
+.btn-s:hover { color: var(--text); border-color: #444; }
 
-  .tab:not(.active):hover {
-    color: var(--text);
-    background: var(--surface2);
-  }
+.out { display: none; flex-direction: column; gap: 8px; }
+.out.show { display: flex; }
 
-  /* Panels */
-  .panel { display: none; }
-  .panel.active { display: block; }
+.out-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+}
 
-  /* Card */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 28px;
-    margin-bottom: 20px;
-  }
+.cp {
+  background: none; border: 1px solid var(--border);
+  color: var(--muted); font-family: var(--mono); font-size: 12px;
+  padding: 2px 7px; border-radius: 2px; cursor: pointer; transition: all 0.15s;
+}
+.cp:hover { color: var(--text); border-color: #444; }
+.cp.ok { color: var(--green); border-color: var(--green); }
 
-  .card-title {
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--muted);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+.box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+.box.ok { border-color: #2a3d2a; }
+.box.err { border-color: #3d2a2a; color: var(--red); }
 
-  .card-title::before {
-    content: '';
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
+.parts { display: flex; flex-direction: column; gap: 6px; }
 
-  textarea, input[type="text"], input[type="password"] {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 14px 16px;
-    resize: vertical;
-    outline: none;
-    transition: border-color 0.2s;
-    line-height: 1.6;
-  }
+.part {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.part-h {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.8px;
+}
+.part-raw {
+  margin-left: auto; color: var(--muted); font-weight: 400;
+  font-size: 12px; max-width: 240px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.part-b { padding: 12px 14px; font-size: 14px; line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
 
-  textarea:focus, input:focus {
-    border-color: var(--accent);
-  }
+.jk { color: #9cdcfe; } .js { color: #ce9178; } .jn { color: #b5cea8; } .jb { color: #569cd6; } .jz { color: var(--muted); }
 
-  textarea { min-height: 100px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; padding: 4px 9px; border-radius: 3px; border: 1px solid;
+}
+.badge.ok  { color: var(--green);  border-color: #1e3a1e; background: #0d1a0d; }
+.badge.err { color: var(--red);    border-color: #3a1e1e; background: #1a0d0d; }
+.badge.run { color: var(--yellow); border-color: #3a2e1e; background: #1a150d; }
 
-  .input-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
-    align-items: center;
-  }
+.radio-g { display: flex; flex-direction: column; gap: 6px; }
+.radio-l {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 14px; color: var(--muted); cursor: pointer;
+  text-transform: none; letter-spacing: 0;
+}
+.radio-l:hover { color: var(--text); }
+input[type=radio] { accent-color: var(--accent); }
 
-  .key-input-wrap {
-    position: relative;
-  }
+.prog-wrap { display: none; }
+.prog-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.prog-track { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; height: 3px; overflow: hidden; }
+#bf-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
 
-  .key-input-wrap input {
-    padding-right: 44px;
-  }
+footer {
+  margin-top: 60px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 
-  .toggle-vis {
-    position: absolute;
-    right: 12px; top: 50%;
-    transform: translateY(-50%);
-    background: none; border: none;
-    color: var(--muted); cursor: pointer;
-    font-size: 16px;
-    transition: color 0.2s;
-  }
-  .toggle-vis:hover { color: var(--text); }
-
-  /* Buttons */
-  .btn {
-    padding: 12px 28px;
-    border-radius: 10px;
-    border: none;
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.3px;
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-  }
-  .btn-primary:hover {
-    background: #6b59e8;
-    transform: translateY(-1px);
-  }
-
-  .btn-secondary {
-    background: var(--surface2);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .btn-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 16px;
-    flex-wrap: wrap;
-  }
-
-  /* Result */
-  .result {
-    margin-top: 20px;
-    display: none;
-  }
-
-  .result.show { display: block; }
-
-  .result-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-
-  .result-label {
-    font-size: 11px;
-    font-family: var(--mono);
-    color: var(--muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .copy-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .copy-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-  .copy-btn.copied { border-color: var(--success); color: var(--success); }
-
-  .result-box {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.7;
-    word-break: break-all;
-    white-space: pre-wrap;
-  }
-
-  .result-box.success { border-color: rgba(72,187,120,0.3); }
-  .result-box.error { border-color: rgba(252,129,129,0.3); color: var(--danger); }
-
-  /* Parts breakdown */
-  .parts {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 16px;
-  }
-
-  .part {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-
-  .part-header {
-    padding: 8px 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .part-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .part-name {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  .part-raw {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    margin-left: auto;
-    word-break: break-all;
-    max-width: 300px;
-    text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .part-content {
-    padding: 12px 14px;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-    word-break: break-all;
-    white-space: pre-wrap;
-  }
-
-  /* JSON highlight */
-  .json-key { color: var(--accent2); }
-  .json-str { color: var(--accent3); }
-  .json-num { color: #a78bfa; }
-  .json-bool { color: var(--danger); }
-  .json-null { color: var(--muted); }
-
-  /* Divider */
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 24px 0;
-  }
-
-  /* Status indicator */
-  .status {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 6px;
-  }
-  .status.valid { background: rgba(72,187,120,0.1); color: var(--success); border: 1px solid rgba(72,187,120,0.2); }
-  .status.invalid { background: rgba(252,129,129,0.1); color: var(--danger); border: 1px solid rgba(252,129,129,0.2); }
-  .status.warning { background: rgba(246,173,85,0.1); color: var(--accent3); border: 1px solid rgba(246,173,85,0.2); }
-
-  /* Info box */
-  .info-box {
-    background: rgba(124,106,247,0.06);
-    border: 1px solid rgba(124,106,247,0.2);
-    border-radius: 10px;
-    padding: 14px 16px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.6;
-    margin-top: 16px;
-  }
-  .info-box strong { color: var(--accent); font-weight: 600; }
-
-  /* Footer */
-  footer {
-    text-align: center;
-    padding: 40px 0 20px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    border-top: 1px solid var(--border);
-    margin-top: 40px;
-  }
-
-  @media (max-width: 600px) {
-    .input-row { grid-template-columns: 1fr; }
-    .tabs { width: 100%; }
-    .tab { flex: 1; text-align: center; padding: 8px 12px; }
-  }
+.footer-r { display: flex; gap: 14px; align-items: center; }
+footer a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+footer a:hover { color: var(--text); }
 </style>
-<script data-goatcounter="https://razvanttn.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
-
 </head>
-
 <body>
-<div class="container">
+<div class="wrap">
 
-  <header>
-    <div class="logo">
-      <div class="logo-icon">🍪</div>
-      <div>
-        <h1>Flask<span>Forge</span></h1>
-        <div class="tagline">flask session cookie decoder / encoder / bruteforcer</div>
-      </div>
-    </div>
-    <a href="https://github.com/razvanttn" target="_blank" style="display:flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-  razvanttn
-    </a>
-  </header>
-
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('decode')">Decode</button>
-    <button class="tab" onclick="switchTab('encode')">Encode</button>
-    <button class="tab" onclick="switchTab('verify')">Verify</button>
-    <button class="tab" onclick="switchTab('bruteforce')">Crack Token</button>
+<header>
+  <div>
+    <span class="site-name">FlaskForge</span>
+    <span class="site-sub">flask session cookie tool</span>
   </div>
+  <a class="gh-link" href="https://github.com/razvanttn" target="_blank">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+    razvanttn
+  </a>
+</header>
 
-  <!-- DECODE PANEL -->
-  <div class="panel active" id="panel-decode">
-    <div class="card">
-      <div class="card-title">Flask Session Cookie</div>
-      <textarea id="decode-input" placeholder="Paste your Flask session cookie here...&#10;&#10;e.g. eyJ1c2VybmFtZSI6ImFkbWluIn0.ZxYt2A.abc123..."></textarea>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="decodeCookie()">Decode</button>
-        <button class="btn btn-secondary" onclick="clearDecode()">Clear</button>
-      </div>
-    </div>
-
-    <div class="result" id="decode-result">
-      <div id="decode-parts" class="parts"></div>
-    </div>
-
-    <div class="info-box">
-      <strong>How it works:</strong> Flask session cookies have 3 parts separated by <code style="color:var(--accent2)">.</code> — the payload (Base64 JSON), a timestamp, and an HMAC signature. The payload can always be decoded without the secret key.
-    </div>
-  </div>
-
-  <!-- ENCODE PANEL -->
-  <div class="panel" id="panel-encode">
-    <div class="card">
-      <div class="card-title">JSON Payload</div>
-      <textarea id="encode-payload" placeholder='{"username": "admin", "role": "user"}' style="min-height:120px"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Secret Key</div>
-      <div class="key-input-wrap">
-        <input type="password" id="encode-key" placeholder="Enter your Flask SECRET_KEY...">
-        <button class="toggle-vis" onclick="toggleKeyVis('encode-key', this)">👁</button>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="encodeCookie()">Generate Cookie</button>
-      <button class="btn btn-secondary" onclick="clearEncode()">Clear</button>
-    </div>
-
-    <div class="result" id="encode-result">
-      <div class="result-header">
-        <span class="result-label">Generated Cookie</span>
-        <button class="copy-btn" id="copy-encode" onclick="copyResult('encode-output', 'copy-encode')">Copy</button>
-      </div>
-      <div class="result-box success" id="encode-output"></div>
-    </div>
-
-    <div class="info-box">
-      <strong>Note:</strong> This generates a valid Flask session cookie signed with your SECRET_KEY. Use this only on applications you own or have permission to test.
-    </div>
-  </div>
-
-  <!-- VERIFY PANEL -->
-  <div class="panel" id="panel-verify">
-    <div class="card">
-      <div class="card-title">Flask Session Cookie</div>
-      <textarea id="verify-cookie" placeholder="Paste the cookie to verify..."></textarea>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Secret Key to Test</div>
-      <div class="key-input-wrap">
-        <input type="password" id="verify-key" placeholder="Enter SECRET_KEY to verify against...">
-        <button class="toggle-vis" onclick="toggleKeyVis('verify-key', this)">👁</button>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="verifyCookie()">Verify Signature</button>
-      <button class="btn btn-secondary" onclick="clearVerify()">Clear</button>
-    </div>
-
-    <div class="result" id="verify-result">
-      <div id="verify-status"></div>
-      <div id="verify-details" class="parts" style="margin-top:12px"></div>
-    </div>
-  </div>
-
-  <!-- BRUTEFORCE PANEL -->
-  <div class="panel" id="panel-bruteforce">
-    <div class="card">
-      <div class="card-title">Flask Session Cookie</div>
-      <textarea id="bf-cookie" placeholder="Paste the Flask session cookie to crack..."></textarea>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Wordlist</div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--muted)">
-          <input type="radio" name="bf-source" value="builtin" checked onchange="toggleWordlistSource()" style="accent-color:var(--accent)">
-          <span id="bf-builtin-label">Built-in wordlist (loading...)</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--muted)">
-          <input type="radio" name="bf-source" value="upload" onchange="toggleWordlistSource()" style="accent-color:var(--accent)">
-          Upload custom wordlist (.txt)
-        </label>
-        <div id="bf-upload-area" style="display:none">
-          <input type="file" id="bf-file" accept=".txt" onchange="loadWordlist(this)" style="display:none">
-          <button class="btn btn-secondary" onclick="document.getElementById('bf-file').click()">Choose .txt file</button>
-          <span id="bf-file-label" style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:12px">No file chosen</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" id="bf-start-btn" onclick="startBruteforce()">Start Bruteforce</button>
-      <button class="btn btn-secondary" onclick="stopBruteforce()" id="bf-stop-btn" style="display:none">Stop</button>
-      <button class="btn btn-secondary" onclick="clearBruteforce()">Clear</button>
-    </div>
-
-    <!-- Progress -->
-    <div id="bf-progress-wrap" style="display:none;margin-top:20px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)" id="bf-progress-label">0 / 0</span>
-        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)" id="bf-speed-label"></span>
-      </div>
-      <div style="background:var(--surface2);border-radius:6px;height:6px;overflow:hidden;border:1px solid var(--border)">
-        <div id="bf-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.1s;border-radius:6px"></div>
-      </div>
-    </div>
-
-    <!-- Result -->
-    <div class="result" id="bf-result" style="margin-top:20px">
-      <div id="bf-status"></div>
-      <div id="bf-found" class="parts" style="margin-top:12px"></div>
-    </div>
-
-    <div class="info-box">
-      <strong>Note:</strong> Runs entirely in your browser — no data is sent anywhere. Use only on CTFs or applications you own.
-    </div>
-  </div>
-
-  <footer>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
-      <div style="font-size:13px;color:var(--text)">made by <span style="color:var(--accent);font-weight:700">k0d</span>
-      <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;justify-content:center">
-        <a href="https://razvanttn.gitbook.io/" target="_blank" style="color:var(--muted);text-decoration:none;font-size:12px;display:flex;align-items:center;gap:6px;transition:color 0.2s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          docs & writeups
-        </a>
-        <span style="color:var(--border)">|</span>
-        <span style="color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.081.114 18.104.1 18.12a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
-          razvanttn_
-        </span>
-      </div>
-    </div>
-  </footer>
+<div class="tabs">
+  <button class="tab active" onclick="sw('decode')">decode</button>
+  <button class="tab" onclick="sw('encode')">encode</button>
+  <button class="tab" onclick="sw('verify')">verify</button>
+  <button class="tab" onclick="sw('crack')">crack token</button>
 </div>
 
+<!-- DECODE -->
+<div class="panel active" id="panel-decode">
+  <div>
+    <label>session cookie</label>
+    <textarea id="dec-in" placeholder="eyJ1c2VybmFtZSI6ImFkbWluIn0.ZxYt2A.abc123..."></textarea>
+  </div>
+  <div class="row">
+    <button class="btn btn-p" onclick="doDecode()">decode</button>
+    <button class="btn btn-s" onclick="clr('dec-in','dec-out')">clear</button>
+  </div>
+  <div class="out" id="dec-out">
+    <div class="parts" id="dec-parts"></div>
+  </div>
+</div>
+
+<!-- ENCODE -->
+<div class="panel" id="panel-encode">
+  <div>
+    <label>json payload</label>
+    <textarea id="enc-payload" placeholder='{"username": "admin", "role": "user"}'></textarea>
+  </div>
+  <div>
+    <label>secret_key</label>
+    <div class="key-wrap">
+      <input type="password" id="enc-key" placeholder="your Flask SECRET_KEY">
+      <button class="vis-btn" onclick="vis('enc-key',this)">👁</button>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-p" onclick="doEncode()">generate</button>
+    <button class="btn btn-s" onclick="clrEnc()">clear</button>
+  </div>
+  <div class="out" id="enc-out">
+    <div class="out-hdr">
+      <span>cookie</span>
+      <button class="cp" id="cp-enc" onclick="cp('enc-box','cp-enc')">copy</button>
+    </div>
+    <div class="box ok" id="enc-box"></div>
+  </div>
+</div>
+
+<!-- VERIFY -->
+<div class="panel" id="panel-verify">
+  <div>
+    <label>session cookie</label>
+    <textarea id="ver-cookie" placeholder="paste cookie..."></textarea>
+  </div>
+  <div>
+    <label>secret_key</label>
+    <div class="key-wrap">
+      <input type="password" id="ver-key" placeholder="SECRET_KEY to test">
+      <button class="vis-btn" onclick="vis('ver-key',this)">👁</button>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-p" onclick="doVerify()">verify</button>
+    <button class="btn btn-s" onclick="clrVer()">clear</button>
+  </div>
+  <div class="out" id="ver-out">
+    <div id="ver-status"></div>
+    <div class="parts" id="ver-parts" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- CRACK -->
+<div class="panel" id="panel-crack">
+  <div>
+    <label>session cookie</label>
+    <textarea id="bf-cookie" placeholder="paste cookie to crack..."></textarea>
+  </div>
+  <div>
+    <label>wordlist</label>
+    <div class="radio-g">
+      <label class="radio-l">
+        <input type="radio" name="bf-src" value="builtin" checked onchange="togWl()">
+        <span id="bf-wl-label">built-in wordlist (loading...)</span>
+      </label>
+      <label class="radio-l">
+        <input type="radio" name="bf-src" value="upload" onchange="togWl()">
+        upload custom wordlist (.txt)
+      </label>
+    </div>
+    <div id="bf-upload" style="display:none;margin-top:8px">
+      <input type="file" id="bf-file" accept=".txt" onchange="loadWl(this)" style="display:none">
+      <button class="btn btn-s" onclick="document.getElementById('bf-file').click()">choose file</button>
+      <span id="bf-file-lbl" style="color:var(--muted);font-size:11px;margin-left:8px">no file chosen</span>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn btn-p" id="bf-start" onclick="startBf()">start</button>
+    <button class="btn btn-s" id="bf-stop" onclick="stopBf()" style="display:none">stop</button>
+    <button class="btn btn-s" onclick="clrBf()">clear</button>
+  </div>
+  <div class="prog-wrap" id="bf-prog">
+    <div class="prog-meta">
+      <span id="bf-prog-lbl">0 / 0</span>
+      <span id="bf-speed"></span>
+    </div>
+    <div class="prog-track"><div id="bf-bar"></div></div>
+  </div>
+  <div class="out" id="bf-out" style="margin-top:4px">
+    <div id="bf-status"></div>
+    <div class="parts" id="bf-found" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<footer>
+  <span>made by <strong style="color:var(--text)">k0d</strong> 🇮🇹</span>
+  <div class="footer-r">
+    <a href="https://razvanttn.gitbook.io/ctf" target="_blank">writeups</a>
+    <span style="color:var(--border)">·</span>
+    <span>discord: razvanttn_</span>
+  </div>
+</footer>
+
+</div>
 <script>
-// ── Utilities ──────────────────────────────────────────────
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';try{return atob(s);}catch(e){return null;}}
+function b64e(s){return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+function ts2date(b){try{const r=b64d(b);if(!r)return null;let n=0;for(let i=0;i<r.length;i++)n=n*256+r.charCodeAt(i);return new Date((n+new Date('2011-01-01T00:00:00Z').getTime()/1000)*1000).toISOString().replace('T',' ').slice(0,19)+' UTC';}catch(e){return null;}}
+function jhl(j){j=j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return j.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,m=>{let c='jn';if(/^"/.test(m))c=/:$/.test(m)?'jk':'js';else if(/true|false/.test(m))c='jb';else if(/null/.test(m))c='jz';return`<span class="${c}">${m}</span>`;});}
 
-function b64UrlDecode(str) {
-  str = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (str.length % 4) str += '=';
-  try { return atob(str); } catch(e) { return null; }
+function sw(name){
+  const ns=['decode','encode','verify','crack'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',ns[i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
 }
 
-function b64UrlEncode(str) {
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
+function vis(id,btn){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';btn.textContent=el.type==='password'?'👁':'🙈';}
 
-function timestampToDate(b64) {
-  try {
-    const raw = b64UrlDecode(b64);
-    if (!raw) return null;
-    let num = 0;
-    for (let i = 0; i < raw.length; i++) {
-      num = num * 256 + raw.charCodeAt(i);
-    }
-    // Flask uses seconds since epoch (Jan 1 2011)
-    const EPOCH = new Date('2011-01-01T00:00:00Z').getTime() / 1000;
-    const ts = (num + EPOCH) * 1000;
-    return new Date(ts).toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
-  } catch(e) { return null; }
-}
-
-function syntaxHighlight(json) {
-  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return json.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
-    let cls = 'json-num';
-    if (/^"/.test(match)) {
-      cls = /:$/.test(match) ? 'json-key' : 'json-str';
-    } else if (/true|false/.test(match)) {
-      cls = 'json-bool';
-    } else if (/null/.test(match)) {
-      cls = 'json-null';
-    }
-    return `<span class="${cls}">${match}</span>`;
+function cp(elId,btnId){
+  navigator.clipboard.writeText(document.getElementById(elId).textContent).then(()=>{
+    const b=document.getElementById(btnId);b.textContent='copied';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='copy';b.classList.remove('ok');},2000);
   });
 }
 
-// ── Tab switching ──────────────────────────────────────────
+function clr(inId,outId){document.getElementById(inId).value='';document.getElementById(outId).classList.remove('show');}
 
-function switchTab(name) {
-  const names = ['decode', 'encode', 'verify', 'bruteforce'];
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', names[i] === name);
-  });
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-}
-
-// ── Toggle key visibility ──────────────────────────────────
-
-function toggleKeyVis(inputId, btn) {
-  const input = document.getElementById(inputId);
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
+// DECODE
+function doDecode(){
+  const raw=document.getElementById('dec-in').value.trim();
+  const outEl=document.getElementById('dec-out');
+  const partsEl=document.getElementById('dec-parts');
+  if(!raw){alert('paste a cookie first');return;}
+  const parts=raw.split('.');
+  if(parts.length<2){partsEl.innerHTML=`<div class="box err">invalid format</div>`;outEl.classList.add('show');return;}
+  let html='';
+  const pd=b64d(parts[0]);
+  let pdHtml='';
+  if(pd){try{pdHtml=jhl(JSON.stringify(JSON.parse(pd),null,2));}catch(e){pdHtml=esc(pd);}}
+  else pdHtml='<span style="color:var(--red)">failed to decode</span>';
+  html+=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span><span class="part-raw">${esc(parts[0].slice(0,36))}${parts[0].length>36?'…':''}</span></div><div class="part-b">${pdHtml}</div></div>`;
+  if(parts.length>=3){
+    const d=ts2date(parts[1]);
+    html+=`<div class="part"><div class="part-h"><span style="color:#4ec9b0">timestamp</span><span class="part-raw">${esc(parts[1])}</span></div><div class="part-b">${d||'<span style="color:var(--muted)">could not decode</span>'}</div></div>`;
+    const sig=parts.slice(2).join('.');
+    html+=`<div class="part"><div class="part-h"><span style="color:#ce9178">hmac-sha1</span><span class="part-raw">${esc(sig.slice(0,36))}${sig.length>36?'…':''}</span></div><div class="part-b" style="color:var(--muted)">verify with secret key → verify tab</div></div>`;
   } else {
-    input.type = 'password';
-    btn.textContent = '👁';
+    html+=`<div class="part"><div class="part-h"><span style="color:#ce9178">part 2</span></div><div class="part-b">${esc(parts[1])}</div></div>`;
   }
+  partsEl.innerHTML=html;outEl.classList.add('show');
 }
 
-// ── Copy ──────────────────────────────────────────────────
-
-function copyResult(elementId, btnId) {
-  const text = document.getElementById(elementId).textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById(btnId);
-    btn.textContent = 'Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-  });
-}
-
-// ── DECODE ────────────────────────────────────────────────
-
-function decodeCookie() {
-  const raw = document.getElementById('decode-input').value.trim();
-  const resultEl = document.getElementById('decode-result');
-  const partsEl = document.getElementById('decode-parts');
-
-  if (!raw) { alert('Paste a cookie first.'); return; }
-
-  const parts = raw.split('.');
-  if (parts.length < 2) {
-    partsEl.innerHTML = `<div class="result-box error">Invalid cookie format — expected at least 2 parts separated by "."</div>`;
-    resultEl.classList.add('show');
-    return;
-  }
-
-  let html = '';
-
-  // Part 1: Payload
-  const payloadRaw = parts[0];
-  let payloadDecoded = b64UrlDecode(payloadRaw);
-  let payloadDisplay = '';
-  let payloadOk = false;
-
-  if (payloadDecoded) {
-    // Check for zlib compression (Flask uses it for large cookies)
-    if (payloadRaw.startsWith('.')) {
-      payloadDisplay = '(compressed payload — decompress with Python zlib)';
-    } else {
-      try {
-        const parsed = JSON.parse(payloadDecoded);
-        payloadDisplay = syntaxHighlight(JSON.stringify(parsed, null, 2));
-        payloadOk = true;
-      } catch(e) {
-        payloadDisplay = escapeHtml(payloadDecoded);
-      }
-    }
-  } else {
-    payloadDisplay = '<span style="color:var(--danger)">Failed to decode Base64</span>';
-  }
-
-  html += `
-    <div class="part">
-      <div class="part-header">
-        <div class="part-dot" style="background:#7c6af7"></div>
-        <div class="part-name" style="color:#7c6af7">Payload</div>
-        <div class="part-raw">${escapeHtml(payloadRaw.slice(0, 40))}${payloadRaw.length > 40 ? '…' : ''}</div>
-      </div>
-      <div class="part-content">${payloadDisplay}</div>
-    </div>`;
-
-  // Part 2: Timestamp
-  if (parts.length >= 3) {
-    const tsRaw = parts[1];
-    const tsDate = timestampToDate(tsRaw);
-    html += `
-      <div class="part">
-        <div class="part-header">
-          <div class="part-dot" style="background:#4fd1c5"></div>
-          <div class="part-name" style="color:#4fd1c5">Timestamp</div>
-          <div class="part-raw">${escapeHtml(tsRaw)}</div>
-        </div>
-        <div class="part-content">${tsDate ? tsDate : '<span style="color:var(--muted)">Could not decode timestamp</span>'}</div>
-      </div>`;
-
-    // Part 3: Signature
-    const sigRaw = parts.slice(2).join('.');
-    html += `
-      <div class="part">
-        <div class="part-header">
-          <div class="part-dot" style="background:#f6ad55"></div>
-          <div class="part-name" style="color:#f6ad55">HMAC Signature</div>
-          <div class="part-raw">${escapeHtml(sigRaw.slice(0, 40))}${sigRaw.length > 40 ? '…' : ''}</div>
-        </div>
-        <div class="part-content" style="color:var(--muted);font-size:12px">Requires SECRET_KEY to verify → use the Verify tab</div>
-      </div>`;
-  } else {
-    // Only 2 parts — might be a simpler token
-    html += `
-      <div class="part">
-        <div class="part-header">
-          <div class="part-dot" style="background:#f6ad55"></div>
-          <div class="part-name" style="color:#f6ad55">Signature / Part 2</div>
-          <div class="part-raw">${escapeHtml(parts[1].slice(0, 40))}</div>
-        </div>
-        <div class="part-content" style="color:var(--muted);font-size:12px">${escapeHtml(parts[1])}</div>
-      </div>`;
-  }
-
-  partsEl.innerHTML = html;
-  resultEl.classList.add('show');
-}
-
-function clearDecode() {
-  document.getElementById('decode-input').value = '';
-  document.getElementById('decode-result').classList.remove('show');
-}
-
-// ── ENCODE ────────────────────────────────────────────────
-
-function encodeCookie() {
-  const payloadStr = document.getElementById('encode-payload').value.trim();
-  const key = document.getElementById('encode-key').value;
-  const resultEl = document.getElementById('encode-result');
-  const outputEl = document.getElementById('encode-output');
-
-  if (!payloadStr) { alert('Enter a JSON payload.'); return; }
-  if (!key) { alert('Enter a SECRET_KEY.'); return; }
-
+// ENCODE
+function doEncode(){
+  const ps=document.getElementById('enc-payload').value.trim();
+  const key=document.getElementById('enc-key').value;
+  const outEl=document.getElementById('enc-out');
+  const box=document.getElementById('enc-box');
+  if(!ps){alert('enter a json payload');return;}
+  if(!key){alert('enter a secret key');return;}
   let payload;
-  try {
-    payload = JSON.parse(payloadStr);
-  } catch(e) {
-    outputEl.textContent = 'Invalid JSON: ' + e.message;
-    outputEl.className = 'result-box error';
-    resultEl.classList.add('show');
-    return;
-  }
-
-  try {
-    const payloadB64 = b64UrlEncode(JSON.stringify(payload));
-    
-    // Timestamp: seconds since Flask epoch (Jan 1 2011)
-    const EPOCH = new Date('2011-01-01T00:00:00Z').getTime() / 1000;
-    const now = Math.floor(Date.now() / 1000) - EPOCH;
-    
-    // Encode timestamp as big-endian bytes, strip leading zeros
-    let ts = now;
-    let tsBytes = [];
-    while (ts > 0) { tsBytes.unshift(ts & 0xff); ts >>= 8; }
-    const tsB64 = b64UrlEncode(String.fromCharCode(...tsBytes));
-
-    // HMAC-SHA1 signature (Flask default)
-    const sigBase = payloadB64 + '.' + tsB64;
-    const sig = CryptoJS.HmacSHA1(sigBase, key);
-    const sigB64 = b64UrlEncode(
-      CryptoJS.enc.Latin1.stringify(sig)
-    );
-
-    const cookie = payloadB64 + '.' + tsB64 + '.' + sigB64;
-    outputEl.textContent = cookie;
-    outputEl.className = 'result-box success';
-    resultEl.classList.add('show');
-  } catch(e) {
-    outputEl.textContent = 'Error: ' + e.message;
-    outputEl.className = 'result-box error';
-    resultEl.classList.add('show');
-  }
+  try{payload=JSON.parse(ps);}catch(e){box.textContent='invalid json: '+e.message;box.className='box err';outEl.classList.add('show');return;}
+  try{
+    const pb=b64e(JSON.stringify(payload));
+    const EPOCH=new Date('2011-01-01T00:00:00Z').getTime()/1000;
+    let ts=Math.floor(Date.now()/1000)-EPOCH;
+    let tb=[];while(ts>0){tb.unshift(ts&0xff);ts>>=8;}
+    const tsb=b64e(String.fromCharCode(...tb));
+    const sig=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(pb+'.'+tsb,key)));
+    box.textContent=pb+'.'+tsb+'.'+sig;box.className='box ok';outEl.classList.add('show');
+  }catch(e){box.textContent='error: '+e.message;box.className='box err';outEl.classList.add('show');}
 }
+function clrEnc(){document.getElementById('enc-payload').value='';document.getElementById('enc-key').value='';document.getElementById('enc-out').classList.remove('show');}
 
-function clearEncode() {
-  document.getElementById('encode-payload').value = '';
-  document.getElementById('encode-key').value = '';
-  document.getElementById('encode-result').classList.remove('show');
+// VERIFY
+function doVerify(){
+  const raw=document.getElementById('ver-cookie').value.trim();
+  const key=document.getElementById('ver-key').value;
+  const outEl=document.getElementById('ver-out');
+  const statusEl=document.getElementById('ver-status');
+  const partsEl=document.getElementById('ver-parts');
+  if(!raw){alert('paste a cookie');return;}
+  if(!key){alert('enter a secret key');return;}
+  const parts=raw.split('.');
+  if(parts.length<3){statusEl.innerHTML=`<div class="badge err">✗ invalid format</div>`;partsEl.innerHTML='';outEl.classList.add('show');return;}
+  try{
+    const sigProvided=parts.slice(2).join('.');
+    const sigComputed=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(parts[0]+'.'+parts[1],key)));
+    const valid=sigComputed===sigProvided;
+    statusEl.innerHTML=valid?`<div class="badge ok">✓ valid — key matches</div>`:`<div class="badge err">✗ invalid — wrong key or tampered</div>`;
+    let det='';
+    const pd=b64d(parts[0]);
+    if(pd){try{det=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${jhl(JSON.stringify(JSON.parse(pd),null,2))}</div></div>`;}catch(e){det=`<div class="part"><div class="part-b">${esc(pd)}</div></div>`;}}
+    partsEl.innerHTML=det;outEl.classList.add('show');
+  }catch(e){statusEl.innerHTML=`<div class="badge err">✗ ${esc(e.message)}</div>`;partsEl.innerHTML='';outEl.classList.add('show');}
 }
+function clrVer(){document.getElementById('ver-cookie').value='';document.getElementById('ver-key').value='';document.getElementById('ver-out').classList.remove('show');}
 
-// ── VERIFY ────────────────────────────────────────────────
-
-function verifyCookie() {
-  const cookieRaw = document.getElementById('verify-cookie').value.trim();
-  const key = document.getElementById('verify-key').value;
-  const resultEl = document.getElementById('verify-result');
-  const statusEl = document.getElementById('verify-status');
-  const detailsEl = document.getElementById('verify-details');
-
-  if (!cookieRaw) { alert('Paste a cookie first.'); return; }
-  if (!key) { alert('Enter a SECRET_KEY.'); return; }
-
-  const parts = cookieRaw.split('.');
-  if (parts.length < 3) {
-    statusEl.innerHTML = `<div class="status invalid">✗ Invalid format — needs at least 3 parts</div>`;
-    detailsEl.innerHTML = '';
-    resultEl.classList.add('show');
-    return;
-  }
-
-  try {
-    const payloadB64 = parts[0];
-    const tsB64 = parts[1];
-    const sigProvided = parts.slice(2).join('.');
-
-    // Recompute signature
-    const sigBase = payloadB64 + '.' + tsB64;
-    const sigComputed = CryptoJS.HmacSHA1(sigBase, key);
-    const sigComputedB64 = b64UrlEncode(CryptoJS.enc.Latin1.stringify(sigComputed));
-
-    const valid = sigComputedB64 === sigProvided;
-
-    statusEl.innerHTML = valid
-      ? `<div class="status valid">✓ Signature is VALID — this key matches</div>`
-      : `<div class="status invalid">✗ Signature is INVALID — wrong key or tampered cookie</div>`;
-
-    // Also decode payload
-    let details = '';
-    const payloadDecoded = b64UrlDecode(payloadB64);
-    if (payloadDecoded) {
-      try {
-        const parsed = JSON.parse(payloadDecoded);
-        details += `
-          <div class="part">
-            <div class="part-header">
-              <div class="part-dot" style="background:#7c6af7"></div>
-              <div class="part-name" style="color:#7c6af7">Decoded Payload</div>
-            </div>
-            <div class="part-content">${syntaxHighlight(JSON.stringify(parsed, null, 2))}</div>
-          </div>`;
-      } catch(e) {
-        details += `<div class="part"><div class="part-content">${escapeHtml(payloadDecoded)}</div></div>`;
-      }
-    }
-    detailsEl.innerHTML = details;
-    resultEl.classList.add('show');
-
-  } catch(e) {
-    statusEl.innerHTML = `<div class="status invalid">✗ Error: ${escapeHtml(e.message)}</div>`;
-    detailsEl.innerHTML = '';
-    resultEl.classList.add('show');
-  }
-}
-
-function clearVerify() {
-  document.getElementById('verify-cookie').value = '';
-  document.getElementById('verify-key').value = '';
-  document.getElementById('verify-result').classList.remove('show');
-}
-
-// ── BRUTEFORCE ────────────────────────────────────────────
-
-const FALLBACK_SECRETS = ['secret','secretkey','mysecretkey','changeme','admin','password','test','dev','flask','insecure'];
-
-let BUILTIN_SECRETS = [];
-
-// Load default wordlist from wordlist.txt at startup
+// CRACK
+const FB=['secret','secretkey','mysecretkey','changeme','admin','password','test','dev','flask','insecure'];
+let WL=[];
 fetch('https://gist.githubusercontent.com/razvanttn/885f3d5e84db23372ef9578561a82a1e/raw/4b24defb2259d313b5c48e2eccc02fc47e2bc77e/gistfile1.txt')
-  .then(r => r.ok ? r.text() : Promise.reject('not found'))
-  .then(txt => {
-    BUILTIN_SECRETS = cleanWordlist(txt);
-    const label = document.getElementById('bf-builtin-label');
-    if (label) label.textContent = `Built-in wordlist (${BUILTIN_SECRETS.length.toLocaleString()} keys)`;
-  })
-  .catch(() => {
-    BUILTIN_SECRETS = FALLBACK_SECRETS;
-    const label = document.getElementById('bf-builtin-label');
-    if (label) label.textContent = `Built-in wordlist (${FALLBACK_SECRETS.length.toLocaleString()} keys — open via server for full 55k list)`;
-  });
+  .then(r=>r.ok?r.text():Promise.reject())
+  .then(t=>{WL=cleanWl(t);const el=document.getElementById('bf-wl-label');if(el)el.textContent=`built-in wordlist (${WL.length.toLocaleString()} keys)`;})
+  .catch(()=>{WL=FB;const el=document.getElementById('bf-wl-label');if(el)el.textContent=`built-in wordlist (${FB.length} keys)`;});
 
-let bfRunning = false;
-let bfWordlist = null;
+let bfRun=false,bfCustom=null;
 
-function cleanWordlist(raw) {
-  const lines = raw.split(/\r?\n/);
-  const result = new Set();
-  for (let line of lines) {
-    line = line.trim();
-    if (!line) continue;
-    // Strip leading/trailing quotes (single, double, backtick)
-    line = line.replace(/^['"`]+|['"`]+$/g, '').trim();
-    // Skip obvious junk/template lines
-    if (
-      line.startsWith('#') ||
-      line.startsWith('//') ||
-      line.startsWith('&') ||
-      line.startsWith('&amp;') ||
-      line.startsWith('<') ||
-      line.includes('{0}') ||
-      line.includes('openssl rand') ||
-      line.length === 0
-    ) continue;
-    if (line.length > 0) result.add(line);
-  }
-  return [...result];
-}
+function cleanWl(raw){const s=new Set();for(let l of raw.split(/\r?\n/)){l=l.trim().replace(/^['"`]+|['"`]+$/g,'').trim();if(!l||l.startsWith('#')||l.startsWith('//')||l.startsWith('&')||l.startsWith('<')||l.includes('{0}')||l.includes('openssl rand'))continue;s.add(l);}return[...s];}
+function togWl(){document.getElementById('bf-upload').style.display=document.querySelector('input[name="bf-src"]:checked').value==='upload'?'block':'none';}
+function loadWl(input){const f=input.files[0];if(!f)return;document.getElementById('bf-file-lbl').textContent=`loading ${f.name}...`;const r=new FileReader();r.onload=e=>{bfCustom=cleanWl(e.target.result);document.getElementById('bf-file-lbl').textContent=`${f.name} — ${bfCustom.length.toLocaleString()} keys`;};r.readAsText(f);}
 
-function toggleWordlistSource() {
-  const source = document.querySelector('input[name="bf-source"]:checked').value;
-  document.getElementById('bf-upload-area').style.display = source === 'upload' ? 'block' : 'none';
-}
-
-function loadWordlist(input) {
-  const file = input.files[0];
-  if (!file) return;
-  document.getElementById('bf-file-label').textContent = `Loading ${file.name}...`;
-  const reader = new FileReader();
-  reader.onload = e => {
-    bfWordlist = cleanWordlist(e.target.result);
-    document.getElementById('bf-file-label').textContent =
-      `${file.name} — ${bfWordlist.length.toLocaleString()} keys loaded`;
-  };
-  reader.readAsText(file);
-}
-
-async function startBruteforce() {
-  const cookie = document.getElementById('bf-cookie').value.trim();
-  if (!cookie) { alert('Paste a cookie first.'); return; }
-
-  const parts = cookie.split('.');
-  if (parts.length < 3) { alert('Invalid cookie — needs at least 3 parts.'); return; }
-
-  const source = document.querySelector('input[name="bf-source"]:checked').value;
-  let wordlist;
-  if (source === 'upload') {
-    if (!bfWordlist) { alert('Upload a wordlist file first.'); return; }
-    wordlist = bfWordlist;
-  } else {
-    wordlist = BUILTIN_SECRETS;
-  }
-
-  const payloadB64 = parts[0];
-  const tsB64 = parts[1];
-  const sigProvided = parts.slice(2).join('.');
-  const sigBase = payloadB64 + '.' + tsB64;
-
-  bfRunning = true;
-  document.getElementById('bf-start-btn').style.display = 'none';
-  document.getElementById('bf-stop-btn').style.display = '';
-  document.getElementById('bf-progress-wrap').style.display = 'block';
-  document.getElementById('bf-result').classList.add('show');
-  document.getElementById('bf-status').innerHTML = `<div class="status warning">⟳ Running... 0 / ${wordlist.length.toLocaleString()}</div>`;
-  document.getElementById('bf-found').innerHTML = '';
-
-  const total = wordlist.length;
-  let found = null;
-  const startTime = Date.now();
-  const CHUNK = 500;
-
-  for (let i = 0; i < total; i += CHUNK) {
-    if (!bfRunning) break;
-
-    const chunk = wordlist.slice(i, i + CHUNK);
-    for (const key of chunk) {
-      const sig = CryptoJS.HmacSHA1(sigBase, key);
-      const sigB64 = b64UrlEncode(CryptoJS.enc.Latin1.stringify(sig));
-      if (sigB64 === sigProvided) {
-        found = key;
-        break;
-      }
+async function startBf(){
+  const cookie=document.getElementById('bf-cookie').value.trim();
+  if(!cookie){alert('paste a cookie');return;}
+  const parts=cookie.split('.');
+  if(parts.length<3){alert('invalid cookie — needs 3 parts');return;}
+  const src=document.querySelector('input[name="bf-src"]:checked').value;
+  const wl=src==='upload'?bfCustom:WL;
+  if(!wl||!wl.length){alert('wordlist empty or not loaded');return;}
+  const sigBase=parts[0]+'.'+parts[1];
+  const sigGiven=parts.slice(2).join('.');
+  bfRun=true;
+  document.getElementById('bf-start').style.display='none';
+  document.getElementById('bf-stop').style.display='';
+  document.getElementById('bf-prog').style.display='block';
+  document.getElementById('bf-out').classList.add('show');
+  document.getElementById('bf-status').innerHTML=`<div class="badge run">running... 0 / ${wl.length.toLocaleString()}</div>`;
+  document.getElementById('bf-found').innerHTML='';
+  const total=wl.length;let found=null;const t0=Date.now();const CHUNK=500;
+  for(let i=0;i<total;i+=CHUNK){
+    if(!bfRun)break;
+    for(const key of wl.slice(i,i+CHUNK)){
+      if(b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)))===sigGiven){found=key;break;}
     }
-    if (found !== null) break;
-
-    // Update progress every chunk
-    const done = Math.min(i + CHUNK, total);
-    const elapsed = (Date.now() - startTime) / 1000;
-    const speed = Math.round(done / elapsed);
-    document.getElementById('bf-progress-bar').style.width = (done / total * 100) + '%';
-    document.getElementById('bf-progress-label').textContent = `${done.toLocaleString()} / ${total.toLocaleString()}`;
-    document.getElementById('bf-speed-label').textContent = `${speed.toLocaleString()} keys/s`;
-    document.getElementById('bf-status').innerHTML = `<div class="status warning">⟳ Running... ${done.toLocaleString()} / ${total.toLocaleString()}</div>`;
-
-    // yield to browser
-    await new Promise(r => setTimeout(r, 0));
+    if(found!==null)break;
+    const done=Math.min(i+CHUNK,total);
+    const speed=Math.round(done/((Date.now()-t0)/1000));
+    document.getElementById('bf-bar').style.width=(done/total*100)+'%';
+    document.getElementById('bf-prog-lbl').textContent=`${done.toLocaleString()} / ${total.toLocaleString()}`;
+    document.getElementById('bf-speed').textContent=`${speed.toLocaleString()} keys/s`;
+    document.getElementById('bf-status').innerHTML=`<div class="badge run">running... ${done.toLocaleString()} / ${total.toLocaleString()}</div>`;
+    await new Promise(r=>setTimeout(r,0));
   }
-
-  bfRunning = false;
-  document.getElementById('bf-start-btn').style.display = '';
-  document.getElementById('bf-stop-btn').style.display = 'none';
-  document.getElementById('bf-progress-bar').style.width = found !== null ? '100%' : document.getElementById('bf-progress-bar').style.width;
-
-  if (found !== null) {
-    // Decode payload too
-    let payloadHtml = '';
-    const payloadDecoded = b64UrlDecode(payloadB64);
-    if (payloadDecoded) {
-      try {
-        const parsed = JSON.parse(payloadDecoded);
-        payloadHtml = `
-          <div class="part" style="margin-top:12px">
-            <div class="part-header">
-              <div class="part-dot" style="background:#7c6af7"></div>
-              <div class="part-name" style="color:#7c6af7">Decoded Payload</div>
-            </div>
-            <div class="part-content">${syntaxHighlight(JSON.stringify(parsed, null, 2))}</div>
-          </div>`;
-      } catch(e) {}
-    }
-
-    document.getElementById('bf-status').innerHTML = `<div class="status valid">✓ Secret key found!</div>`;
-    document.getElementById('bf-found').innerHTML = `
-      <div class="part">
-        <div class="part-header">
-          <div class="part-dot" style="background:var(--success)"></div>
-          <div class="part-name" style="color:var(--success)">SECRET_KEY</div>
-          <button class="copy-btn" id="copy-bf-key" onclick="copyText('${escapeHtml(found)}', 'copy-bf-key')" style="margin-left:auto">Copy</button>
-        </div>
-        <div class="part-content" style="color:var(--success);font-size:16px;font-weight:600">${escapeHtml(found) || '(empty string)'}</div>
-      </div>
-      ${payloadHtml}`;
+  bfRun=false;
+  document.getElementById('bf-start').style.display='';
+  document.getElementById('bf-stop').style.display='none';
+  if(found!==null){
+    document.getElementById('bf-bar').style.width='100%';
+    document.getElementById('bf-status').innerHTML=`<div class="badge ok">✓ key found</div>`;
+    let ph='';const pd=b64d(parts[0]);
+    if(pd){try{ph=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${jhl(JSON.stringify(JSON.parse(pd),null,2))}</div></div>`;}catch(e){}}
+    document.getElementById('bf-found').innerHTML=`<div class="part"><div class="part-h"><span style="color:var(--green)">SECRET_KEY</span><button class="cp" id="cp-bf" onclick="cpT('${esc(found)}','cp-bf')" style="margin-left:auto">copy</button></div><div class="part-b" style="color:var(--green)">${esc(found)||'(empty string)'}</div></div>${ph}`;
   } else {
-    document.getElementById('bf-status').innerHTML = `<div class="status invalid">✗ Key not found in wordlist</div>`;
+    document.getElementById('bf-status').innerHTML=`<div class="badge err">✗ not found in wordlist</div>`;
   }
 }
-
-function stopBruteforce() {
-  bfRunning = false;
+function stopBf(){bfRun=false;}
+function clrBf(){
+  bfRun=false;
+  document.getElementById('bf-cookie').value='';
+  document.getElementById('bf-out').classList.remove('show');
+  document.getElementById('bf-prog').style.display='none';
+  document.getElementById('bf-bar').style.width='0%';
+  document.getElementById('bf-start').style.display='';
+  document.getElementById('bf-stop').style.display='none';
+  bfCustom=null;
+  document.getElementById('bf-file-lbl').textContent='no file chosen';
+  document.getElementById('bf-file').value='';
+  document.querySelector('input[name="bf-src"][value="builtin"]').checked=true;
+  document.getElementById('bf-upload').style.display='none';
 }
-
-function clearBruteforce() {
-  bfRunning = false;
-  document.getElementById('bf-cookie').value = '';
-  document.getElementById('bf-result').classList.remove('show');
-  document.getElementById('bf-progress-wrap').style.display = 'none';
-  document.getElementById('bf-progress-bar').style.width = '0%';
-  document.getElementById('bf-start-btn').style.display = '';
-  document.getElementById('bf-stop-btn').style.display = 'none';
-  bfWordlist = null;
-  document.getElementById('bf-file-label').textContent = 'No file chosen';
-  document.getElementById('bf-file').value = '';
-  document.querySelector('input[name="bf-source"][value="builtin"]').checked = true;
-  document.getElementById('bf-upload-area').style.display = 'none';
-}
-
-function copyText(text, btnId) {
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById(btnId);
-    if (!btn) return;
-    btn.textContent = 'Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-  });
-}
-
-// ── Helpers ───────────────────────────────────────────────
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+function cpT(text,btnId){navigator.clipboard.writeText(text).then(()=>{const b=document.getElementById(btnId);if(!b)return;b.textContent='copied';b.classList.add('ok');setTimeout(()=>{b.textContent='copy';b.classList.remove('ok');},2000);});}
 </script>
 </body>
 </html>
