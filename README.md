@@ -1,4 +1,4 @@
-# FlaskForge 🔥
+# FlaskForge 🍪
 
 I built this because I couldn't find a single decent tool online that handles Flask session cookies properly — most decoders don't encode, most encoders don't verify, and none of them crack. So I made one that does all three.
 
