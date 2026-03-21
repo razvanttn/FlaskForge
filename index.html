@@ -250,7 +250,7 @@ footer a:hover { color: var(--text); }
 <header>
   <div>
     <span class="site-name">FlaskForge</span>
-    <span class="site-sub">flask-session cookie tool</span>
+    <span class="site-sub">flask session cookie tool</span>
   </div>
   <a class="gh-link" href="https://github.com/razvanttn" target="_blank">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -290,7 +290,7 @@ footer a:hover { color: var(--text); }
     <label>secret_key</label>
     <div class="key-wrap">
       <input type="password" id="enc-key" placeholder="your Flask SECRET_KEY">
-      <button class="vis-btn" onclick="vis('enc-key',this)">👁</button>
+      <button class="vis-btn" onclick="vis('enc-key',this)">show</button>
     </div>
   </div>
   <div class="row">
@@ -316,7 +316,7 @@ footer a:hover { color: var(--text); }
     <label>secret_key</label>
     <div class="key-wrap">
       <input type="password" id="ver-key" placeholder="SECRET_KEY to test">
-      <button class="vis-btn" onclick="vis('ver-key',this)">👁</button>
+      <button class="vis-btn" onclick="vis('ver-key',this)">show</button>
     </div>
   </div>
   <div class="row">
@@ -372,7 +372,7 @@ footer a:hover { color: var(--text); }
 </div>
 
 <footer>
-  <span>made by <strong style="color:var(--text)">k0d</strong></span>
+  <span>made by <strong style="color:var(--text)">k0d</strong> 🇮🇹</span>
   <div class="footer-r">
     <a href="https://razvanttn.gitbook.io/ctf" target="_blank">writeups</a>
     <span style="color:var(--border)">·</span>
@@ -395,7 +395,7 @@ function sw(name){
   document.getElementById('panel-'+name).classList.add('active');
 }
 
-function vis(id,btn){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';btn.textContent=el.type==='password'?'👁':'🙈';}
+function vis(id,btn){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';btn.textContent=el.type==='password'?'show':'hide';}
 
 function cp(elId,btnId){
   navigator.clipboard.writeText(document.getElementById(elId).textContent).then(()=>{
