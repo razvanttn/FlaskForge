@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlaskForge — Flask Session Cookie Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c6af7;
+    --accent2: #4fd1c5;
+    --accent3: #f6ad55;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #48bb78;
+    --danger: #fc8181;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,247,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow blobs */
+  body::after {
+    content: '';
+    position: fixed;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(124,106,247,0.08) 0%, transparent 70%);
+    top: -200px; left: -200px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 48px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-top: 2px;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 32px;
+    width: fit-content;
+  }
+
+  .tab {
+    padding: 8px 24px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .tab:not(.active):hover {
+    color: var(--text);
+    background: var(--surface2);
+  }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  textarea, input[type="text"], input[type="password"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 14px 16px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+
+  textarea:focus, input:focus {
+    border-color: var(--accent);
+  }
+
+  textarea { min-height: 100px; }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .key-input-wrap {
+    position: relative;
+  }
+
+  .key-input-wrap input {
+    padding-right: 44px;
+  }
+
+  .toggle-vis {
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 16px;
+    transition: color 0.2s;
+  }
+  .toggle-vis:hover { color: var(--text); }
+
+  /* Buttons */
+  .btn {
+    padding: 12px 28px;
+    border-radius: 10px;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: #6b59e8;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* Result */
+  .result {
+    margin-top: 20px;
+    display: none;
+  }
+
+  .result.show { display: block; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .result-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .copy-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .result-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.7;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
+
+  .result-box.success { border-color: rgba(72,187,120,0.3); }
+  .result-box.error { border-color: rgba(252,129,129,0.3); color: var(--danger); }
+
+  /* Parts breakdown */
+  .parts {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .part {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .part-header {
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .part-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .part-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .part-raw {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    word-break: break-all;
+    max-width: 300px;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .part-content {
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
+
+  /* JSON highlight */
+  .json-key { color: var(--accent2); }
+  .json-str { color: var(--accent3); }
+  .json-num { color: #a78bfa; }
+  .json-bool { color: var(--danger); }
+  .json-null { color: var(--muted); }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  /* Status indicator */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .status.valid { background: rgba(72,187,120,0.1); color: var(--success); border: 1px solid rgba(72,187,120,0.2); }
+  .status.invalid { background: rgba(252,129,129,0.1); color: var(--danger); border: 1px solid rgba(252,129,129,0.2); }
+  .status.warning { background: rgba(246,173,85,0.1); color: var(--accent3); border: 1px solid rgba(246,173,85,0.2); }
+
+  /* Info box */
+  .info-box {
+    background: rgba(124,106,247,0.06);
+    border: 1px solid rgba(124,106,247,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 16px;
+  }
+  .info-box strong { color: var(--accent); font-weight: 600; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 40px 0 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+
+  @media (max-width: 600px) {
+    .input-row { grid-template-columns: 1fr; }
+    .tabs { width: 100%; }
+    .tab { flex: 1; text-align: center; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔥</div>
+      <div>
+        <h1>Flask<span>Forge</span></h1>
+        <div class="tagline">flask session cookie decoder / encoder / bruteforcer</div>
+      </div>
+    </div>
+    <div class="badge">v1.0.0</div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('decode')">Decode</button>
+    <button class="tab" onclick="switchTab('encode')">Encode</button>
+    <button class="tab" onclick="switchTab('verify')">Verify</button>
+    <button class="tab" onclick="switchTab('bruteforce')">Bruteforce</button>
+  </div>
+
+  <!-- DECODE PANEL -->
+  <div class="panel active" id="panel-decode">
+    <div class="card">
+      <div class="card-title">Flask Session Cookie</div>
+      <textarea id="decode-input" placeholder="Paste your Flask session cookie here...&#10;&#10;e.g. eyJ1c2VybmFtZSI6ImFkbWluIn0.ZxYt2A.abc123..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="decodeCookie()">Decode</button>
+        <button class="btn btn-secondary" onclick="clearDecode()">Clear</button>
+      </div>
+    </div>
+
+    <div class="result" id="decode-result">
+      <div id="decode-parts" class="parts"></div>
+    </div>
+
+    <div class="info-box">
+      <strong>How it works:</strong> Flask session cookies have 3 parts separated by <code style="color:var(--accent2)">.</code> — the payload (Base64 JSON), a timestamp, and an HMAC signature. The payload can always be decoded without the secret key.
+    </div>
+  </div>
+
+  <!-- ENCODE PANEL -->
+  <div class="panel" id="panel-encode">
+    <div class="card">
+      <div class="card-title">JSON Payload</div>
+      <textarea id="encode-payload" placeholder='{"username": "admin", "role": "user"}' style="min-height:120px"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Secret Key</div>
+      <div class="key-input-wrap">
+        <input type="password" id="encode-key" placeholder="Enter your Flask SECRET_KEY...">
+        <button class="toggle-vis" onclick="toggleKeyVis('encode-key', this)">👁</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="encodeCookie()">Generate Cookie</button>
+      <button class="btn btn-secondary" onclick="clearEncode()">Clear</button>
+    </div>
+
+    <div class="result" id="encode-result">
+      <div class="result-header">
+        <span class="result-label">Generated Cookie</span>
+        <button class="copy-btn" id="copy-encode" onclick="copyResult('encode-output', 'copy-encode')">Copy</button>
+      </div>
+      <div class="result-box success" id="encode-output"></div>
+    </div>
+
+    <div class="info-box">
+      <strong>Note:</strong> This generates a valid Flask session cookie signed with your SECRET_KEY. Use this only on applications you own or have permission to test.
+    </div>
+  </div>
+
+  <!-- VERIFY PANEL -->
+  <div class="panel" id="panel-verify">
+    <div class="card">
+      <div class="card-title">Flask Session Cookie</div>
+      <textarea id="verify-cookie" placeholder="Paste the cookie to verify..."></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Secret Key to Test</div>
+      <div class="key-input-wrap">
+        <input type="password" id="verify-key" placeholder="Enter SECRET_KEY to verify against...">
+        <button class="toggle-vis" onclick="toggleKeyVis('verify-key', this)">👁</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="verifyCookie()">Verify Signature</button>
+      <button class="btn btn-secondary" onclick="clearVerify()">Clear</button>
+    </div>
+
+    <div class="result" id="verify-result">
+      <div id="verify-status"></div>
+      <div id="verify-details" class="parts" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- BRUTEFORCE PANEL -->
+  <div class="panel" id="panel-bruteforce">
+    <div class="card">
+      <div class="card-title">Flask Session Cookie</div>
+      <textarea id="bf-cookie" placeholder="Paste the Flask session cookie to crack..."></textarea>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Wordlist</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--muted)">
+          <input type="radio" name="bf-source" value="builtin" checked onchange="toggleWordlistSource()" style="accent-color:var(--accent)">
+          <span id="bf-builtin-label">Built-in wordlist (loading...)</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--muted)">
+          <input type="radio" name="bf-source" value="upload" onchange="toggleWordlistSource()" style="accent-color:var(--accent)">
+          Upload custom wordlist (.txt)
+        </label>
+        <div id="bf-upload-area" style="display:none">
+          <input type="file" id="bf-file" accept=".txt" onchange="loadWordlist(this)" style="display:none">
+          <button class="btn btn-secondary" onclick="document.getElementById('bf-file').click()">Choose .txt file</button>
+          <span id="bf-file-label" style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:12px">No file chosen</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="bf-start-btn" onclick="startBruteforce()">Start Bruteforce</button>
+      <button class="btn btn-secondary" onclick="stopBruteforce()" id="bf-stop-btn" style="display:none">Stop</button>
+      <button class="btn btn-secondary" onclick="clearBruteforce()">Clear</button>
+    </div>
+
+    <!-- Progress -->
+    <div id="bf-progress-wrap" style="display:none;margin-top:20px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)" id="bf-progress-label">0 / 0</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--muted)" id="bf-speed-label"></span>
+      </div>
+      <div style="background:var(--surface2);border-radius:6px;height:6px;overflow:hidden;border:1px solid var(--border)">
+        <div id="bf-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.1s;border-radius:6px"></div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result" id="bf-result" style="margin-top:20px">
+      <div id="bf-status"></div>
+      <div id="bf-found" class="parts" style="margin-top:12px"></div>
+    </div>
+
+    <div class="info-box">
+      <strong>Note:</strong> Runs entirely in your browser — no data is sent anywhere. Use only on CTFs or applications you own.
+    </div>
+  </div>
+
+  <footer>
+    FlaskForge — client-side only, no data sent anywhere
+  </footer>
+</div>
+
+<script>
+// ── Utilities ──────────────────────────────────────────────
+
+function b64UrlDecode(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  try { return atob(str); } catch(e) { return null; }
+}
+
+function b64UrlEncode(str) {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function timestampToDate(b64) {
+  try {
+    const raw = b64UrlDecode(b64);
+    if (!raw) return null;
+    let num = 0;
+    for (let i = 0; i < raw.length; i++) {
+      num = num * 256 + raw.charCodeAt(i);
+    }
+    // Flask uses seconds since epoch (Jan 1 2011)
+    const EPOCH = new Date('2011-01-01T00:00:00Z').getTime() / 1000;
+    const ts = (num + EPOCH) * 1000;
+    return new Date(ts).toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  } catch(e) { return null; }
+}
+
+function syntaxHighlight(json) {
+  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return json.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+    let cls = 'json-num';
+    if (/^"/.test(match)) {
+      cls = /:$/.test(match) ? 'json-key' : 'json-str';
+    } else if (/true|false/.test(match)) {
+      cls = 'json-bool';
+    } else if (/null/.test(match)) {
+      cls = 'json-null';
+    }
+    return `<span class="${cls}">${match}</span>`;
+  });
+}
+
+// ── Tab switching ──────────────────────────────────────────
+
+function switchTab(name) {
+  const names = ['decode', 'encode', 'verify', 'bruteforce'];
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+// ── Toggle key visibility ──────────────────────────────────
+
+function toggleKeyVis(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+// ── Copy ──────────────────────────────────────────────────
+
+function copyResult(elementId, btnId) {
+  const text = document.getElementById(elementId).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ── DECODE ────────────────────────────────────────────────
+
+function decodeCookie() {
+  const raw = document.getElementById('decode-input').value.trim();
+  const resultEl = document.getElementById('decode-result');
+  const partsEl = document.getElementById('decode-parts');
+
+  if (!raw) { alert('Paste a cookie first.'); return; }
+
+  const parts = raw.split('.');
+  if (parts.length < 2) {
+    partsEl.innerHTML = `<div class="result-box error">Invalid cookie format — expected at least 2 parts separated by "."</div>`;
+    resultEl.classList.add('show');
+    return;
+  }
+
+  let html = '';
+
+  // Part 1: Payload
+  const payloadRaw = parts[0];
+  let payloadDecoded = b64UrlDecode(payloadRaw);
+  let payloadDisplay = '';
+  let payloadOk = false;
+
+  if (payloadDecoded) {
+    // Check for zlib compression (Flask uses it for large cookies)
+    if (payloadRaw.startsWith('.')) {
+      payloadDisplay = '(compressed payload — decompress with Python zlib)';
+    } else {
+      try {
+        const parsed = JSON.parse(payloadDecoded);
+        payloadDisplay = syntaxHighlight(JSON.stringify(parsed, null, 2));
+        payloadOk = true;
+      } catch(e) {
+        payloadDisplay = escapeHtml(payloadDecoded);
+      }
+    }
+  } else {
+    payloadDisplay = '<span style="color:var(--danger)">Failed to decode Base64</span>';
+  }
+
+  html += `
+    <div class="part">
+      <div class="part-header">
+        <div class="part-dot" style="background:#7c6af7"></div>
+        <div class="part-name" style="color:#7c6af7">Payload</div>
+        <div class="part-raw">${escapeHtml(payloadRaw.slice(0, 40))}${payloadRaw.length > 40 ? '…' : ''}</div>
+      </div>
+      <div class="part-content">${payloadDisplay}</div>
+    </div>`;
+
+  // Part 2: Timestamp
+  if (parts.length >= 3) {
+    const tsRaw = parts[1];
+    const tsDate = timestampToDate(tsRaw);
+    html += `
+      <div class="part">
+        <div class="part-header">
+          <div class="part-dot" style="background:#4fd1c5"></div>
+          <div class="part-name" style="color:#4fd1c5">Timestamp</div>
+          <div class="part-raw">${escapeHtml(tsRaw)}</div>
+        </div>
+        <div class="part-content">${tsDate ? tsDate : '<span style="color:var(--muted)">Could not decode timestamp</span>'}</div>
+      </div>`;
+
+    // Part 3: Signature
+    const sigRaw = parts.slice(2).join('.');
+    html += `
+      <div class="part">
+        <div class="part-header">
+          <div class="part-dot" style="background:#f6ad55"></div>
+          <div class="part-name" style="color:#f6ad55">HMAC Signature</div>
+          <div class="part-raw">${escapeHtml(sigRaw.slice(0, 40))}${sigRaw.length > 40 ? '…' : ''}</div>
+        </div>
+        <div class="part-content" style="color:var(--muted);font-size:12px">Requires SECRET_KEY to verify → use the Verify tab</div>
+      </div>`;
+  } else {
+    // Only 2 parts — might be a simpler token
+    html += `
+      <div class="part">
+        <div class="part-header">
+          <div class="part-dot" style="background:#f6ad55"></div>
+          <div class="part-name" style="color:#f6ad55">Signature / Part 2</div>
+          <div class="part-raw">${escapeHtml(parts[1].slice(0, 40))}</div>
+        </div>
+        <div class="part-content" style="color:var(--muted);font-size:12px">${escapeHtml(parts[1])}</div>
+      </div>`;
+  }
+
+  partsEl.innerHTML = html;
+  resultEl.classList.add('show');
+}
+
+function clearDecode() {
+  document.getElementById('decode-input').value = '';
+  document.getElementById('decode-result').classList.remove('show');
+}
+
+// ── ENCODE ────────────────────────────────────────────────
+
+function encodeCookie() {
+  const payloadStr = document.getElementById('encode-payload').value.trim();
+  const key = document.getElementById('encode-key').value;
+  const resultEl = document.getElementById('encode-result');
+  const outputEl = document.getElementById('encode-output');
+
+  if (!payloadStr) { alert('Enter a JSON payload.'); return; }
+  if (!key) { alert('Enter a SECRET_KEY.'); return; }
+
+  let payload;
+  try {
+    payload = JSON.parse(payloadStr);
+  } catch(e) {
+    outputEl.textContent = 'Invalid JSON: ' + e.message;
+    outputEl.className = 'result-box error';
+    resultEl.classList.add('show');
+    return;
+  }
+
+  try {
+    const payloadB64 = b64UrlEncode(JSON.stringify(payload));
+    
+    // Timestamp: seconds since Flask epoch (Jan 1 2011)
+    const EPOCH = new Date('2011-01-01T00:00:00Z').getTime() / 1000;
+    const now = Math.floor(Date.now() / 1000) - EPOCH;
+    
+    // Encode timestamp as big-endian bytes, strip leading zeros
+    let ts = now;
+    let tsBytes = [];
+    while (ts > 0) { tsBytes.unshift(ts & 0xff); ts >>= 8; }
+    const tsB64 = b64UrlEncode(String.fromCharCode(...tsBytes));
+
+    // HMAC-SHA1 signature (Flask default)
+    const sigBase = payloadB64 + '.' + tsB64;
+    const sig = CryptoJS.HmacSHA1(sigBase, key);
+    const sigB64 = b64UrlEncode(
+      CryptoJS.enc.Latin1.stringify(sig)
+    );
+
+    const cookie = payloadB64 + '.' + tsB64 + '.' + sigB64;
+    outputEl.textContent = cookie;
+    outputEl.className = 'result-box success';
+    resultEl.classList.add('show');
+  } catch(e) {
+    outputEl.textContent = 'Error: ' + e.message;
+    outputEl.className = 'result-box error';
+    resultEl.classList.add('show');
+  }
+}
+
+function clearEncode() {
+  document.getElementById('encode-payload').value = '';
+  document.getElementById('encode-key').value = '';
+  document.getElementById('encode-result').classList.remove('show');
+}
+
+// ── VERIFY ────────────────────────────────────────────────
+
+function verifyCookie() {
+  const cookieRaw = document.getElementById('verify-cookie').value.trim();
+  const key = document.getElementById('verify-key').value;
+  const resultEl = document.getElementById('verify-result');
+  const statusEl = document.getElementById('verify-status');
+  const detailsEl = document.getElementById('verify-details');
+
+  if (!cookieRaw) { alert('Paste a cookie first.'); return; }
+  if (!key) { alert('Enter a SECRET_KEY.'); return; }
+
+  const parts = cookieRaw.split('.');
+  if (parts.length < 3) {
+    statusEl.innerHTML = `<div class="status invalid">✗ Invalid format — needs at least 3 parts</div>`;
+    detailsEl.innerHTML = '';
+    resultEl.classList.add('show');
+    return;
+  }
+
+  try {
+    const payloadB64 = parts[0];
+    const tsB64 = parts[1];
+    const sigProvided = parts.slice(2).join('.');
+
+    // Recompute signature
+    const sigBase = payloadB64 + '.' + tsB64;
+    const sigComputed = CryptoJS.HmacSHA1(sigBase, key);
+    const sigComputedB64 = b64UrlEncode(CryptoJS.enc.Latin1.stringify(sigComputed));
+
+    const valid = sigComputedB64 === sigProvided;
+
+    statusEl.innerHTML = valid
+      ? `<div class="status valid">✓ Signature is VALID — this key matches</div>`
+      : `<div class="status invalid">✗ Signature is INVALID — wrong key or tampered cookie</div>`;
+
+    // Also decode payload
+    let details = '';
+    const payloadDecoded = b64UrlDecode(payloadB64);
+    if (payloadDecoded) {
+      try {
+        const parsed = JSON.parse(payloadDecoded);
+        details += `
+          <div class="part">
+            <div class="part-header">
+              <div class="part-dot" style="background:#7c6af7"></div>
+              <div class="part-name" style="color:#7c6af7">Decoded Payload</div>
+            </div>
+            <div class="part-content">${syntaxHighlight(JSON.stringify(parsed, null, 2))}</div>
+          </div>`;
+      } catch(e) {
+        details += `<div class="part"><div class="part-content">${escapeHtml(payloadDecoded)}</div></div>`;
+      }
+    }
+    detailsEl.innerHTML = details;
+    resultEl.classList.add('show');
+
+  } catch(e) {
+    statusEl.innerHTML = `<div class="status invalid">✗ Error: ${escapeHtml(e.message)}</div>`;
+    detailsEl.innerHTML = '';
+    resultEl.classList.add('show');
+  }
+}
+
+function clearVerify() {
+  document.getElementById('verify-cookie').value = '';
+  document.getElementById('verify-key').value = '';
+  document.getElementById('verify-result').classList.remove('show');
+}
+
+// ── BRUTEFORCE ────────────────────────────────────────────
+
+const FALLBACK_SECRETS = ['secret','secretkey','mysecretkey','changeme','admin','password','test','dev','flask','insecure'];
+
+let BUILTIN_SECRETS = [];
+
+// Load default wordlist from wordlist.txt at startup
+fetch('https://gist.githubusercontent.com/razvanttn/885f3d5e84db23372ef9578561a82a1e/raw/wordlist.txt')
+  .then(r => r.ok ? r.text() : Promise.reject('not found'))
+  .then(txt => {
+    BUILTIN_SECRETS = cleanWordlist(txt);
+    const label = document.getElementById('bf-builtin-label');
+    if (label) label.textContent = `Built-in wordlist (${BUILTIN_SECRETS.length.toLocaleString()} keys)`;
+  })
+  .catch(() => {
+    BUILTIN_SECRETS = FALLBACK_SECRETS;
+    const label = document.getElementById('bf-builtin-label');
+    if (label) label.textContent = `Built-in wordlist (${FALLBACK_SECRETS.length.toLocaleString()} keys — open via server for full 55k list)`;
+  });
+
+let bfRunning = false;
+let bfWordlist = null;
+
+function cleanWordlist(raw) {
+  const lines = raw.split(/\r?\n/);
+  const result = new Set();
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
+    // Strip leading/trailing quotes (single, double, backtick)
+    line = line.replace(/^['"`]+|['"`]+$/g, '').trim();
+    // Skip obvious junk/template lines
+    if (
+      line.startsWith('#') ||
+      line.startsWith('//') ||
+      line.startsWith('&') ||
+      line.startsWith('&amp;') ||
+      line.startsWith('<') ||
+      line.includes('{0}') ||
+      line.includes('openssl rand') ||
+      line.length === 0
+    ) continue;
+    if (line.length > 0) result.add(line);
+  }
+  return [...result];
+}
+
+function toggleWordlistSource() {
+  const source = document.querySelector('input[name="bf-source"]:checked').value;
+  document.getElementById('bf-upload-area').style.display = source === 'upload' ? 'block' : 'none';
+}
+
+function loadWordlist(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('bf-file-label').textContent = `Loading ${file.name}...`;
+  const reader = new FileReader();
+  reader.onload = e => {
+    bfWordlist = cleanWordlist(e.target.result);
+    document.getElementById('bf-file-label').textContent =
+      `${file.name} — ${bfWordlist.length.toLocaleString()} keys loaded`;
+  };
+  reader.readAsText(file);
+}
+
+async function startBruteforce() {
+  const cookie = document.getElementById('bf-cookie').value.trim();
+  if (!cookie) { alert('Paste a cookie first.'); return; }
+
+  const parts = cookie.split('.');
+  if (parts.length < 3) { alert('Invalid cookie — needs at least 3 parts.'); return; }
+
+  const source = document.querySelector('input[name="bf-source"]:checked').value;
+  let wordlist;
+  if (source === 'upload') {
+    if (!bfWordlist) { alert('Upload a wordlist file first.'); return; }
+    wordlist = bfWordlist;
+  } else {
+    wordlist = BUILTIN_SECRETS;
+  }
+
+  const payloadB64 = parts[0];
+  const tsB64 = parts[1];
+  const sigProvided = parts.slice(2).join('.');
+  const sigBase = payloadB64 + '.' + tsB64;
+
+  bfRunning = true;
+  document.getElementById('bf-start-btn').style.display = 'none';
+  document.getElementById('bf-stop-btn').style.display = '';
+  document.getElementById('bf-progress-wrap').style.display = 'block';
+  document.getElementById('bf-result').classList.add('show');
+  document.getElementById('bf-status').innerHTML = `<div class="status warning">⟳ Running... 0 / ${wordlist.length.toLocaleString()}</div>`;
+  document.getElementById('bf-found').innerHTML = '';
+
+  const total = wordlist.length;
+  let found = null;
+  const startTime = Date.now();
+  const CHUNK = 500;
+
+  for (let i = 0; i < total; i += CHUNK) {
+    if (!bfRunning) break;
+
+    const chunk = wordlist.slice(i, i + CHUNK);
+    for (const key of chunk) {
+      const sig = CryptoJS.HmacSHA1(sigBase, key);
+      const sigB64 = b64UrlEncode(CryptoJS.enc.Latin1.stringify(sig));
+      if (sigB64 === sigProvided) {
+        found = key;
+        break;
+      }
+    }
+    if (found !== null) break;
+
+    // Update progress every chunk
+    const done = Math.min(i + CHUNK, total);
+    const elapsed = (Date.now() - startTime) / 1000;
+    const speed = Math.round(done / elapsed);
+    document.getElementById('bf-progress-bar').style.width = (done / total * 100) + '%';
+    document.getElementById('bf-progress-label').textContent = `${done.toLocaleString()} / ${total.toLocaleString()}`;
+    document.getElementById('bf-speed-label').textContent = `${speed.toLocaleString()} keys/s`;
+    document.getElementById('bf-status').innerHTML = `<div class="status warning">⟳ Running... ${done.toLocaleString()} / ${total.toLocaleString()}</div>`;
+
+    // yield to browser
+    await new Promise(r => setTimeout(r, 0));
+  }
+
+  bfRunning = false;
+  document.getElementById('bf-start-btn').style.display = '';
+  document.getElementById('bf-stop-btn').style.display = 'none';
+  document.getElementById('bf-progress-bar').style.width = found !== null ? '100%' : document.getElementById('bf-progress-bar').style.width;
+
+  if (found !== null) {
+    // Decode payload too
+    let payloadHtml = '';
+    const payloadDecoded = b64UrlDecode(payloadB64);
+    if (payloadDecoded) {
+      try {
+        const parsed = JSON.parse(payloadDecoded);
+        payloadHtml = `
+          <div class="part" style="margin-top:12px">
+            <div class="part-header">
+              <div class="part-dot" style="background:#7c6af7"></div>
+              <div class="part-name" style="color:#7c6af7">Decoded Payload</div>
+            </div>
+            <div class="part-content">${syntaxHighlight(JSON.stringify(parsed, null, 2))}</div>
+          </div>`;
+      } catch(e) {}
+    }
+
+    document.getElementById('bf-status').innerHTML = `<div class="status valid">✓ Secret key found!</div>`;
+    document.getElementById('bf-found').innerHTML = `
+      <div class="part">
+        <div class="part-header">
+          <div class="part-dot" style="background:var(--success)"></div>
+          <div class="part-name" style="color:var(--success)">SECRET_KEY</div>
+          <button class="copy-btn" id="copy-bf-key" onclick="copyText('${escapeHtml(found)}', 'copy-bf-key')" style="margin-left:auto">Copy</button>
+        </div>
+        <div class="part-content" style="color:var(--success);font-size:16px;font-weight:600">${escapeHtml(found) || '(empty string)'}</div>
+      </div>
+      ${payloadHtml}`;
+  } else {
+    document.getElementById('bf-status').innerHTML = `<div class="status invalid">✗ Key not found in wordlist</div>`;
+  }
+}
+
+function stopBruteforce() {
+  bfRunning = false;
+}
+
+function clearBruteforce() {
+  bfRunning = false;
+  document.getElementById('bf-cookie').value = '';
+  document.getElementById('bf-result').classList.remove('show');
+  document.getElementById('bf-progress-wrap').style.display = 'none';
+  document.getElementById('bf-progress-bar').style.width = '0%';
+  document.getElementById('bf-start-btn').style.display = '';
+  document.getElementById('bf-stop-btn').style.display = 'none';
+  bfWordlist = null;
+  document.getElementById('bf-file-label').textContent = 'No file chosen';
+  document.getElementById('bf-file').value = '';
+  document.querySelector('input[name="bf-source"][value="builtin"]').checked = true;
+  document.getElementById('bf-upload-area').style.display = 'none';
+}
+
+function copyText(text, btnId) {
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
