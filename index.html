@@ -8,6 +8,7 @@
 <title>FlaskForge</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 <script data-goatcounter="https://razvanttn.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -250,7 +251,7 @@ footer a:hover { color: var(--text); }
 <header>
   <div>
     <span class="site-name">FlaskForge</span>
-    <span class="site-sub">flask-session cookie tool</span>
+    <span class="site-sub">flask session cookie tool</span>
   </div>
   <a class="gh-link" href="https://github.com/razvanttn" target="_blank">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -291,6 +292,19 @@ footer a:hover { color: var(--text); }
     <div class="key-wrap">
       <input type="password" id="enc-key" placeholder="your Flask SECRET_KEY">
       <button class="vis-btn" onclick="vis('enc-key',this)">show</button>
+    </div>
+  </div>
+  <div>
+    <label>format</label>
+    <div class="radio-g" style="flex-direction:row;gap:16px">
+      <label class="radio-l">
+        <input type="radio" name="enc-fmt" value="plain" checked>
+        plain (legacy)
+      </label>
+      <label class="radio-l">
+        <input type="radio" name="enc-fmt" value="compressed">
+        compressed (itsdangerous)
+      </label>
     </div>
   </div>
   <div class="row">
@@ -372,7 +386,7 @@ footer a:hover { color: var(--text); }
 </div>
 
 <footer>
-  <span>made by <strong style="color:var(--text)">k0d</strong></span>
+  <span>made by <strong style="color:var(--text)">k0d</strong> 🇮🇹</span>
   <div class="footer-r">
     <a href="https://razvanttn.gitbook.io/ctf" target="_blank">writeups</a>
     <span style="color:var(--border)">·</span>
@@ -385,8 +399,52 @@ footer a:hover { color: var(--text); }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';try{return atob(s);}catch(e){return null;}}
 function b64e(s){return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+function b64dBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';try{const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}catch(e){return null;}}
 function ts2date(b){try{const r=b64d(b);if(!r)return null;let n=0;for(let i=0;i<r.length;i++)n=n*256+r.charCodeAt(i);return new Date((n+new Date('2011-01-01T00:00:00Z').getTime()/1000)*1000).toISOString().replace('T',' ').slice(0,19)+' UTC';}catch(e){return null;}}
 function jhl(j){j=j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return j.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,m=>{let c='jn';if(/^"/.test(m))c=/:$/.test(m)?'jk':'js';else if(/true|false/.test(m))c='jb';else if(/null/.test(m))c='jz';return`<span class="${c}">${m}</span>`;});}
+
+// Detect and decode payload — supports both plain base64 JSON and zlib-compressed
+function decodePayload(raw) {
+  // itsdangerous compressed cookies start with a dot prefix before base64
+  // but when split by '.', the first part might be the compressed payload
+  // Try zlib first if regular JSON parse fails
+  const bytes = b64dBytes(raw);
+  if (!bytes) return {ok: false, html: '<span style="color:var(--red)">failed to decode base64</span>', type: 'unknown'};
+  
+  // Try plain JSON first
+  try {
+    const plain = new TextDecoder().decode(bytes);
+    const parsed = JSON.parse(plain);
+    return {ok: true, html: jhl(JSON.stringify(parsed, null, 2)), type: 'json'};
+  } catch(e) {}
+  
+  // Try zlib decompress (pako)
+  try {
+    const decompressed = pako.inflate(bytes, {to: 'string'});
+    const parsed = JSON.parse(decompressed);
+    return {ok: true, html: jhl(JSON.stringify(parsed, null, 2)), type: 'zlib'};
+  } catch(e) {}
+
+  // Raw text fallback
+  try {
+    return {ok: true, html: esc(new TextDecoder().decode(bytes)), type: 'raw'};
+  } catch(e) {}
+
+  return {ok: false, html: '<span style="color:var(--red)">could not decode payload</span>', type: 'unknown'};
+}
+
+// itsdangerous new format: payload starts with '.' meaning compressed
+// full cookie looks like: .eJx....<b64>.<timestamp>.<sig>
+function parseCookie(raw) {
+  raw = raw.trim();
+  let compressed = false;
+  if (raw.startsWith('.')) {
+    compressed = true;
+    raw = raw.slice(1); // remove leading dot
+  }
+  const parts = raw.split('.');
+  return {parts, compressed};
+}
 
 function sw(name){
   const ns=['decode','encode','verify','crack'];
@@ -412,14 +470,15 @@ function doDecode(){
   const outEl=document.getElementById('dec-out');
   const partsEl=document.getElementById('dec-parts');
   if(!raw){alert('paste a cookie first');return;}
-  const parts=raw.split('.');
+
+  const {parts, compressed} = parseCookie(raw);
   if(parts.length<2){partsEl.innerHTML=`<div class="box err">invalid format</div>`;outEl.classList.add('show');return;}
+
   let html='';
-  const pd=b64d(parts[0]);
-  let pdHtml='';
-  if(pd){try{pdHtml=jhl(JSON.stringify(JSON.parse(pd),null,2));}catch(e){pdHtml=esc(pd);}}
-  else pdHtml='<span style="color:var(--red)">failed to decode</span>';
-  html+=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span><span class="part-raw">${esc(parts[0].slice(0,36))}${parts[0].length>36?'…':''}</span></div><div class="part-b">${pdHtml}</div></div>`;
+  const decoded = decodePayload(parts[0]);
+  const typeLabel = compressed ? 'payload (zlib)' : decoded.type === 'zlib' ? 'payload (zlib)' : 'payload';
+  html+=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">${typeLabel}</span><span class="part-raw">${esc(parts[0].slice(0,36))}${parts[0].length>36?'…':''}</span></div><div class="part-b">${decoded.html}</div></div>`;
+
   if(parts.length>=3){
     const d=ts2date(parts[1]);
     html+=`<div class="part"><div class="part-h"><span style="color:#4ec9b0">timestamp</span><span class="part-raw">${esc(parts[1])}</span></div><div class="part-b">${d||'<span style="color:var(--muted)">could not decode</span>'}</div></div>`;
@@ -435,6 +494,7 @@ function doDecode(){
 function doEncode(){
   const ps=document.getElementById('enc-payload').value.trim();
   const key=document.getElementById('enc-key').value;
+  const fmt=document.querySelector('input[name="enc-fmt"]:checked').value;
   const outEl=document.getElementById('enc-out');
   const box=document.getElementById('enc-box');
   if(!ps){alert('enter a json payload');return;}
@@ -442,42 +502,60 @@ function doEncode(){
   let payload;
   try{payload=JSON.parse(ps);}catch(e){box.textContent='invalid json: '+e.message;box.className='box err';outEl.classList.add('show');return;}
   try{
-    const pb=b64e(JSON.stringify(payload));
     const EPOCH=new Date('2011-01-01T00:00:00Z').getTime()/1000;
     let ts=Math.floor(Date.now()/1000)-EPOCH;
     let tb=[];while(ts>0){tb.unshift(ts&0xff);ts>>=8;}
     const tsb=b64e(String.fromCharCode(...tb));
-    const sig=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(pb+'.'+tsb,key)));
-    box.textContent=pb+'.'+tsb+'.'+sig;box.className='box ok';outEl.classList.add('show');
+
+    let pb;
+    if(fmt==='compressed'){
+      // zlib compress the JSON then base64url encode
+      const jsonBytes=new TextEncoder().encode(JSON.stringify(payload));
+      const compressed=pako.deflate(jsonBytes);
+      let bstr='';for(let i=0;i<compressed.length;i++)bstr+=String.fromCharCode(compressed[i]);
+      pb=b64e(bstr);
+      const sigBase=pb+'.'+tsb;
+      const sig=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)));
+      box.textContent='.'+pb+'.'+tsb+'.'+sig;
+    } else {
+      pb=b64e(JSON.stringify(payload));
+      const sigBase=pb+'.'+tsb;
+      const sig=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)));
+      box.textContent=pb+'.'+tsb+'.'+sig;
+    }
+    box.className='box ok';outEl.classList.add('show');
   }catch(e){box.textContent='error: '+e.message;box.className='box err';outEl.classList.add('show');}
 }
 function clrEnc(){document.getElementById('enc-payload').value='';document.getElementById('enc-key').value='';document.getElementById('enc-out').classList.remove('show');}
 
-// VERIFY
+// VERIFY — handles both formats
 function doVerify(){
-  const raw=document.getElementById('ver-cookie').value.trim();
+  const rawInput=document.getElementById('ver-cookie').value.trim();
   const key=document.getElementById('ver-key').value;
   const outEl=document.getElementById('ver-out');
   const statusEl=document.getElementById('ver-status');
   const partsEl=document.getElementById('ver-parts');
-  if(!raw){alert('paste a cookie');return;}
+  if(!rawInput){alert('paste a cookie');return;}
   if(!key){alert('enter a secret key');return;}
-  const parts=raw.split('.');
+
+  const {parts, compressed} = parseCookie(rawInput);
   if(parts.length<3){statusEl.innerHTML=`<div class="badge err">✗ invalid format</div>`;partsEl.innerHTML='';outEl.classList.add('show');return;}
+
   try{
     const sigProvided=parts.slice(2).join('.');
-    const sigComputed=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(parts[0]+'.'+parts[1],key)));
+    // For compressed cookies, sigBase uses the original raw parts (without leading dot stripped)
+    const sigBase=parts[0]+'.'+parts[1];
+    const sigComputed=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)));
     const valid=sigComputed===sigProvided;
     statusEl.innerHTML=valid?`<div class="badge ok">✓ valid — key matches</div>`:`<div class="badge err">✗ invalid — wrong key or tampered</div>`;
-    let det='';
-    const pd=b64d(parts[0]);
-    if(pd){try{det=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${jhl(JSON.stringify(JSON.parse(pd),null,2))}</div></div>`;}catch(e){det=`<div class="part"><div class="part-b">${esc(pd)}</div></div>`;}}
+    const decoded = decodePayload(parts[0]);
+    const det = decoded.ok ? `<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${decoded.html}</div></div>` : '';
     partsEl.innerHTML=det;outEl.classList.add('show');
   }catch(e){statusEl.innerHTML=`<div class="badge err">✗ ${esc(e.message)}</div>`;partsEl.innerHTML='';outEl.classList.add('show');}
 }
 function clrVer(){document.getElementById('ver-cookie').value='';document.getElementById('ver-key').value='';document.getElementById('ver-out').classList.remove('show');}
 
-// CRACK
+// CRACK — handles both formats
 const FB=['secret','secretkey','mysecretkey','changeme','admin','password','test','dev','flask','insecure'];
 let WL=[];
 fetch('https://gist.githubusercontent.com/razvanttn/885f3d5e84db23372ef9578561a82a1e/raw/4b24defb2259d313b5c48e2eccc02fc47e2bc77e/gistfile1.txt')
@@ -494,7 +572,7 @@ function loadWl(input){const f=input.files[0];if(!f)return;document.getElementBy
 async function startBf(){
   const cookie=document.getElementById('bf-cookie').value.trim();
   if(!cookie){alert('paste a cookie');return;}
-  const parts=cookie.split('.');
+  const {parts} = parseCookie(cookie);
   if(parts.length<3){alert('invalid cookie — needs 3 parts');return;}
   const src=document.querySelector('input[name="bf-src"]:checked').value;
   const wl=src==='upload'?bfCustom:WL;
@@ -529,8 +607,8 @@ async function startBf(){
   if(found!==null){
     document.getElementById('bf-bar').style.width='100%';
     document.getElementById('bf-status').innerHTML=`<div class="badge ok">✓ key found</div>`;
-    let ph='';const pd=b64d(parts[0]);
-    if(pd){try{ph=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${jhl(JSON.stringify(JSON.parse(pd),null,2))}</div></div>`;}catch(e){}}
+    const decoded = decodePayload(parts[0]);
+    const ph = decoded.ok ? `<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${decoded.html}</div></div>` : '';
     document.getElementById('bf-found').innerHTML=`<div class="part"><div class="part-h"><span style="color:var(--green)">SECRET_KEY</span><button class="cp" id="cp-bf" onclick="cpT('${esc(found)}','cp-bf')" style="margin-left:auto">copy</button></div><div class="part-b" style="color:var(--green)">${esc(found)||'(empty string)'}</div></div>${ph}`;
   } else {
     document.getElementById('bf-status').innerHTML=`<div class="badge err">✗ not found in wordlist</div>`;
