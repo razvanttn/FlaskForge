@@ -403,29 +403,25 @@ function b64dBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s
 function ts2date(b){try{const r=b64d(b);if(!r)return null;let n=0;for(let i=0;i<r.length;i++)n=n*256+r.charCodeAt(i);return new Date((n+new Date('2011-01-01T00:00:00Z').getTime()/1000)*1000).toISOString().replace('T',' ').slice(0,19)+' UTC';}catch(e){return null;}}
 function jhl(j){j=j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return j.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,m=>{let c='jn';if(/^"/.test(m))c=/:$/.test(m)?'jk':'js';else if(/true|false/.test(m))c='jb';else if(/null/.test(m))c='jz';return`<span class="${c}">${m}</span>`;});}
 
-// Detect and decode payload — supports both plain base64 JSON and zlib-compressed
 function decodePayload(raw) {
-  // itsdangerous compressed cookies start with a dot prefix before base64
-  // but when split by '.', the first part might be the compressed payload
-  // Try zlib first if regular JSON parse fails
+
   const bytes = b64dBytes(raw);
   if (!bytes) return {ok: false, html: '<span style="color:var(--red)">failed to decode base64</span>', type: 'unknown'};
   
-  // Try plain JSON first
   try {
     const plain = new TextDecoder().decode(bytes);
     const parsed = JSON.parse(plain);
     return {ok: true, html: jhl(JSON.stringify(parsed, null, 2)), type: 'json'};
   } catch(e) {}
   
-  // Try zlib decompress (pako)
+
   try {
     const decompressed = pako.inflate(bytes, {to: 'string'});
     const parsed = JSON.parse(decompressed);
     return {ok: true, html: jhl(JSON.stringify(parsed, null, 2)), type: 'zlib'};
   } catch(e) {}
 
-  // Raw text fallback
+
   try {
     return {ok: true, html: esc(new TextDecoder().decode(bytes)), type: 'raw'};
   } catch(e) {}
@@ -433,8 +429,7 @@ function decodePayload(raw) {
   return {ok: false, html: '<span style="color:var(--red)">could not decode payload</span>', type: 'unknown'};
 }
 
-// itsdangerous new format: payload starts with '.' meaning compressed
-// full cookie looks like: .eJx....<b64>.<timestamp>.<sig>
+
 function parseCookie(raw) {
   raw = raw.trim();
   let compressed = false;
@@ -464,7 +459,6 @@ function cp(elId,btnId){
 
 function clr(inId,outId){document.getElementById(inId).value='';document.getElementById(outId).classList.remove('show');}
 
-// DECODE
 function doDecode(){
   const raw=document.getElementById('dec-in').value.trim();
   const outEl=document.getElementById('dec-out');
@@ -490,7 +484,7 @@ function doDecode(){
   partsEl.innerHTML=html;outEl.classList.add('show');
 }
 
-// ENCODE
+
 function doEncode(){
   const ps=document.getElementById('enc-payload').value.trim();
   const key=document.getElementById('enc-key').value;
@@ -509,7 +503,7 @@ function doEncode(){
 
     let pb;
     if(fmt==='compressed'){
-      // zlib compress the JSON then base64url encode
+
       const jsonBytes=new TextEncoder().encode(JSON.stringify(payload));
       const compressed=pako.deflate(jsonBytes);
       let bstr='';for(let i=0;i<compressed.length;i++)bstr+=String.fromCharCode(compressed[i]);
@@ -528,7 +522,6 @@ function doEncode(){
 }
 function clrEnc(){document.getElementById('enc-payload').value='';document.getElementById('enc-key').value='';document.getElementById('enc-out').classList.remove('show');}
 
-// VERIFY — handles both formats
 function doVerify(){
   const rawInput=document.getElementById('ver-cookie').value.trim();
   const key=document.getElementById('ver-key').value;
@@ -543,7 +536,6 @@ function doVerify(){
 
   try{
     const sigProvided=parts.slice(2).join('.');
-    // For compressed cookies, sigBase uses the original raw parts (without leading dot stripped)
     const sigBase=parts[0]+'.'+parts[1];
     const sigComputed=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)));
     const valid=sigComputed===sigProvided;
@@ -555,7 +547,6 @@ function doVerify(){
 }
 function clrVer(){document.getElementById('ver-cookie').value='';document.getElementById('ver-key').value='';document.getElementById('ver-out').classList.remove('show');}
 
-// CRACK — handles both formats
 const FB=['secret','secretkey','mysecretkey','changeme','admin','password','test','dev','flask','insecure'];
 let WL=[];
 fetch('https://gist.githubusercontent.com/razvanttn/885f3d5e84db23372ef9578561a82a1e/raw/4b24defb2259d313b5c48e2eccc02fc47e2bc77e/gistfile1.txt')
