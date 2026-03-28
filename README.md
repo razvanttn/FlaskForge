@@ -2,7 +2,7 @@
 
 I built this because I couldn't find a single decent tool online that handles Flask session cookies properly — most decoders don't encode, most encoders don't verify, and none of them crack. So I made one that does all three.
 
-This tool runs lives at
+This tool runs live at
 **[razvanttn.github.io/FlaskForge](https://razvanttn.github.io/FlaskForge)**
 
 ![Presentation Gif](https://github.com/user-attachments/assets/88c05080-a0e3-4bbf-b3d6-d6350ea7338d)
