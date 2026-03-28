@@ -7,620 +7,162 @@
 <meta name="keywords" content="flask cookie decoder, flask session cookie, flask secret key cracker, CTF tool, pentest, flask encode cookie, flask secret bruteforce">
 <title>FlaskForge</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 <script data-goatcounter="https://razvanttn.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg: #111;
-  --surface: #1a1a1a;
-  --border: #2c2c2c;
-  --accent: #e8e8e8;
-  --text: #c8c8c8;
-  --muted: #555;
-  --green: #4a9;
-  --red: #c55;
-  --yellow: #ca6;
-  --mono: 'JetBrains Mono', monospace;
-}
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.wrap {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 46px 26px 74px;
-}
-
-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 40px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.site-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.3px;
-}
-
-.site-sub {
-  font-size: 13px;
-  color: var(--muted);
-  margin-left: 12px;
-}
-
-.gh-link {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 13px;
-  transition: color 0.15s;
-}
-.gh-link:hover { color: var(--text); }
-
-.tabs {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 24px;
-}
-
-.tab {
-  padding: 10px 18px;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: all 0.15s;
-}
-.tab:hover { color: var(--text); }
-.tab.active {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--accent);
-}
-
-.panel { display: none; }
-.panel.active { display: flex; flex-direction: column; gap: 13px; }
-
-label {
-  display: block;
-  font-size: 13px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 5px;
-}
-
-textarea, input[type=text], input[type=password] {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 13px;
-  padding: 12px 14px;
-  outline: none;
-  transition: border-color 0.15s;
-  resize: vertical;
-  line-height: 1.6;
-}
-textarea { min-height: 100px; }
-textarea:focus, input:focus { border-color: #444; }
-
-.key-wrap { position: relative; }
-.key-wrap input { padding-right: 36px; }
-.vis-btn {
-  position: absolute; right: 8px; top: 50%;
-  transform: translateY(-50%);
-  background: none; border: none;
-  color: var(--muted); cursor: pointer; font-size: 13px;
-}
-.vis-btn:hover { color: var(--text); }
-
-.row { display: flex; gap: 8px; flex-wrap: wrap; }
-
-.btn {
-  padding: 10px 18px;
-  border-radius: 3px;
-  border: 1px solid var(--border);
-  font-family: var(--mono);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.btn-p { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
-.btn-p:hover { opacity: 0.88; }
-.btn-s { background: transparent; color: var(--muted); }
-.btn-s:hover { color: var(--text); border-color: #444; }
-
-.out { display: none; flex-direction: column; gap: 8px; }
-.out.show { display: flex; }
-
-.out-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
-}
-
-.cp {
-  background: none; border: 1px solid var(--border);
-  color: var(--muted); font-family: var(--mono); font-size: 13px;
-  padding: 2px 7px; border-radius: 2px; cursor: pointer; transition: all 0.15s;
-}
-.cp:hover { color: var(--text); border-color: #444; }
-.cp.ok { color: var(--green); border-color: var(--green); }
-
-.box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 12px 14px;
-  font-size: 13px;
-  line-height: 1.7;
-  word-break: break-all;
-  white-space: pre-wrap;
-}
-.box.ok { border-color: #2a3d2a; }
-.box.err { border-color: #3d2a2a; color: var(--red); }
-
-.parts { display: flex; flex-direction: column; gap: 6px; }
-
-.part {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.part-h {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.8px;
-}
-.part-raw {
-  margin-left: auto; color: var(--muted); font-weight: 400;
-  font-size: 13px; max-width: 240px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.part-b { padding: 12px 14px; font-size: 13px; line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
-
-.jk { color: #9cdcfe; } .js { color: #ce9178; } .jn { color: #b5cea8; } .jb { color: #569cd6; } .jz { color: var(--muted); }
-
-.badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; padding: 4px 9px; border-radius: 3px; border: 1px solid;
-}
-.badge.ok  { color: var(--green);  border-color: #1e3a1e; background: #0d1a0d; }
-.badge.err { color: var(--red);    border-color: #3a1e1e; background: #1a0d0d; }
-.badge.run { color: var(--yellow); border-color: #3a2e1e; background: #1a150d; }
-
-.radio-g { display: flex; flex-direction: column; gap: 6px; }
-.radio-l {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 13px; color: var(--muted); cursor: pointer;
-  text-transform: none; letter-spacing: 0;
-}
-.radio-l:hover { color: var(--text); }
-input[type=radio] { accent-color: var(--accent); }
-
-.prog-wrap { display: none; }
-.prog-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
-.prog-track { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; height: 3px; overflow: hidden; }
-#bf-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
-
-footer {
-  margin-top: 60px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 13px;
-}
-
-.footer-r { display: flex; gap: 13px; align-items: center; }
-footer a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
-footer a:hover { color: var(--text); }
-</style>
 </head>
 <body>
 <div class="wrap">
 
-<header>
-  <div>
-    <span class="site-name">FlaskForge</span>
-    <span class="site-sub">flask session cookie tool</span>
-  </div>
-  <a class="gh-link" href="https://github.com/razvanttn" target="_blank">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-    razvanttn
-  </a>
-</header>
+  <header>
+    <div>
+      <span class="site-name">FlaskForge</span>
+      <span class="site-sub">flask session cookie tool</span>
+    </div>
+    <a class="gh-link" href="https://github.com/razvanttn" target="_blank">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> 
 
-<div class="tabs">
-  <button class="tab active" onclick="sw('decode')">decode</button>
-  <button class="tab" onclick="sw('encode')">encode</button>
-  <button class="tab" onclick="sw('verify')">verify</button>
-  <button class="tab" onclick="sw('crack')">crack token</button>
+      razvanttn
+    </a>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="sw('decode')">decode</button>
+    <button class="tab" onclick="sw('encode')">encode</button>
+    <button class="tab" onclick="sw('verify')">verify</button>
+    <button class="tab" onclick="sw('crack')">crack token</button>
+  </div>
+
+  <!-- DECODE -->
+  <div class="panel active" id="panel-decode">
+    <div>
+      <label>session cookie</label>
+      <textarea id="dec-in" placeholder="eyJ1c2VybmFtZSI6ImFkbWluIn0.ZxYt2A.abc123..."></textarea>
+    </div>
+    <div class="row">
+      <button class="btn btn-p" onclick="doDecode()">decode</button>
+      <button class="btn btn-s" onclick="clr('dec-in','dec-out')">clear</button>
+    </div>
+    <div class="out" id="dec-out">
+      <div class="parts" id="dec-parts"></div>
+    </div>
+  </div>
+
+  <!-- ENCODE -->
+  <div class="panel" id="panel-encode">
+    <div>
+      <label>json payload</label>
+      <textarea id="enc-payload" placeholder='{"username": "admin", "role": "user"}'></textarea>
+    </div>
+    <div>
+      <label>secret_key</label>
+      <div class="key-wrap">
+        <input type="password" id="enc-key" placeholder="your Flask SECRET_KEY">
+        <button class="vis-btn" onclick="vis('enc-key',this)">show</button>
+      </div>
+    </div>
+    <div>
+      <label>format</label>
+      <div class="radio-g" style="flex-direction:row;gap:16px">
+        <label class="radio-l">
+          <input type="radio" name="enc-fmt" value="plain" checked>
+          plain (legacy)
+        </label>
+        <label class="radio-l">
+          <input type="radio" name="enc-fmt" value="compressed">
+          compressed (itsdangerous)
+        </label>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-p" onclick="doEncode()">generate</button>
+      <button class="btn btn-s" onclick="clrEnc()">clear</button>
+    </div>
+    <div class="out" id="enc-out">
+      <div class="out-hdr">
+        <span>cookie</span>
+        <button class="cp" id="cp-enc" onclick="cp('enc-box','cp-enc')">copy</button>
+      </div>
+      <div class="box ok" id="enc-box"></div>
+    </div>
+  </div>
+
+  <!-- VERIFY -->
+  <div class="panel" id="panel-verify">
+    <div>
+      <label>session cookie</label>
+      <textarea id="ver-cookie" placeholder="paste cookie..."></textarea>
+    </div>
+    <div>
+      <label>secret_key</label>
+      <div class="key-wrap">
+        <input type="password" id="ver-key" placeholder="SECRET_KEY to test">
+        <button class="vis-btn" onclick="vis('ver-key',this)">show</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-p" onclick="doVerify()">verify</button>
+      <button class="btn btn-s" onclick="clrVer()">clear</button>
+    </div>
+    <div class="out" id="ver-out">
+      <div id="ver-status"></div>
+      <div class="parts" id="ver-parts" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- CRACK -->
+  <div class="panel" id="panel-crack">
+    <div>
+      <label>session cookie</label>
+      <textarea id="bf-cookie" placeholder="paste cookie to crack..."></textarea>
+    </div>
+    <div>
+      <label>wordlist</label>
+      <div class="radio-g">
+        <label class="radio-l">
+          <input type="radio" name="bf-src" value="builtin" checked onchange="togWl()">
+          <span id="bf-wl-label">built-in wordlist (loading...)</span>
+        </label>
+        <label class="radio-l">
+          <input type="radio" name="bf-src" value="upload" onchange="togWl()">
+          upload custom wordlist (.txt)
+        </label>
+      </div>
+      <div id="bf-upload" style="display:none;margin-top:8px">
+        <input type="file" id="bf-file" accept=".txt" onchange="loadWl(this)" style="display:none">
+        <button class="btn btn-s" onclick="document.getElementById('bf-file').click()">choose file</button>
+        <span id="bf-file-lbl" style="color:var(--muted);font-size:11px;margin-left:8px">no file chosen</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-p" id="bf-start" onclick="startBf()">start</button>
+      <button class="btn btn-s" id="bf-stop" onclick="stopBf()" style="display:none">stop</button>
+      <button class="btn btn-s" onclick="clrBf()">clear</button>
+    </div>
+    <div class="prog-wrap" id="bf-prog">
+      <div class="prog-meta">
+        <span id="bf-prog-lbl">0 / 0</span>
+        <span id="bf-speed"></span>
+      </div>
+      <div class="prog-track"><div id="bf-bar"></div></div>
+    </div>
+    <div class="out" id="bf-out" style="margin-top:4px">
+      <div id="bf-status"></div>
+      <div class="parts" id="bf-found" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>made by <strong style="color:var(--text)">k0d</strong></span>
+    <div class="footer-r">
+      <a href="https://razvanttn.gitbook.io/ctf" target="_blank">writeups</a>
+      <span style="color:var(--border)">·</span>
+      <span>discord: razvanttn_</span>
+    </div>
+  </footer>
+
 </div>
-
-<!-- DECODE -->
-<div class="panel active" id="panel-decode">
-  <div>
-    <label>session cookie</label>
-    <textarea id="dec-in" placeholder="eyJ1c2VybmFtZSI6ImFkbWluIn0.ZxYt2A.abc123..."></textarea>
-  </div>
-  <div class="row">
-    <button class="btn btn-p" onclick="doDecode()">decode</button>
-    <button class="btn btn-s" onclick="clr('dec-in','dec-out')">clear</button>
-  </div>
-  <div class="out" id="dec-out">
-    <div class="parts" id="dec-parts"></div>
-  </div>
-</div>
-
-<!-- ENCODE -->
-<div class="panel" id="panel-encode">
-  <div>
-    <label>json payload</label>
-    <textarea id="enc-payload" placeholder='{"username": "admin", "role": "user"}'></textarea>
-  </div>
-  <div>
-    <label>secret_key</label>
-    <div class="key-wrap">
-      <input type="password" id="enc-key" placeholder="your Flask SECRET_KEY">
-      <button class="vis-btn" onclick="vis('enc-key',this)">show</button>
-    </div>
-  </div>
-  <div>
-    <label>format</label>
-    <div class="radio-g" style="flex-direction:row;gap:16px">
-      <label class="radio-l">
-        <input type="radio" name="enc-fmt" value="plain" checked>
-        plain (legacy)
-      </label>
-      <label class="radio-l">
-        <input type="radio" name="enc-fmt" value="compressed">
-        compressed (itsdangerous)
-      </label>
-    </div>
-  </div>
-  <div class="row">
-    <button class="btn btn-p" onclick="doEncode()">generate</button>
-    <button class="btn btn-s" onclick="clrEnc()">clear</button>
-  </div>
-  <div class="out" id="enc-out">
-    <div class="out-hdr">
-      <span>cookie</span>
-      <button class="cp" id="cp-enc" onclick="cp('enc-box','cp-enc')">copy</button>
-    </div>
-    <div class="box ok" id="enc-box"></div>
-  </div>
-</div>
-
-<!-- VERIFY -->
-<div class="panel" id="panel-verify">
-  <div>
-    <label>session cookie</label>
-    <textarea id="ver-cookie" placeholder="paste cookie..."></textarea>
-  </div>
-  <div>
-    <label>secret_key</label>
-    <div class="key-wrap">
-      <input type="password" id="ver-key" placeholder="SECRET_KEY to test">
-      <button class="vis-btn" onclick="vis('ver-key',this)">show</button>
-    </div>
-  </div>
-  <div class="row">
-    <button class="btn btn-p" onclick="doVerify()">verify</button>
-    <button class="btn btn-s" onclick="clrVer()">clear</button>
-  </div>
-  <div class="out" id="ver-out">
-    <div id="ver-status"></div>
-    <div class="parts" id="ver-parts" style="margin-top:8px"></div>
-  </div>
-</div>
-
-<!-- CRACK -->
-<div class="panel" id="panel-crack">
-  <div>
-    <label>session cookie</label>
-    <textarea id="bf-cookie" placeholder="paste cookie to crack..."></textarea>
-  </div>
-  <div>
-    <label>wordlist</label>
-    <div class="radio-g">
-      <label class="radio-l">
-        <input type="radio" name="bf-src" value="builtin" checked onchange="togWl()">
-        <span id="bf-wl-label">built-in wordlist (loading...)</span>
-      </label>
-      <label class="radio-l">
-        <input type="radio" name="bf-src" value="upload" onchange="togWl()">
-        upload custom wordlist (.txt)
-      </label>
-    </div>
-    <div id="bf-upload" style="display:none;margin-top:8px">
-      <input type="file" id="bf-file" accept=".txt" onchange="loadWl(this)" style="display:none">
-      <button class="btn btn-s" onclick="document.getElementById('bf-file').click()">choose file</button>
-      <span id="bf-file-lbl" style="color:var(--muted);font-size:11px;margin-left:8px">no file chosen</span>
-    </div>
-  </div>
-  <div class="row">
-    <button class="btn btn-p" id="bf-start" onclick="startBf()">start</button>
-    <button class="btn btn-s" id="bf-stop" onclick="stopBf()" style="display:none">stop</button>
-    <button class="btn btn-s" onclick="clrBf()">clear</button>
-  </div>
-  <div class="prog-wrap" id="bf-prog">
-    <div class="prog-meta">
-      <span id="bf-prog-lbl">0 / 0</span>
-      <span id="bf-speed"></span>
-    </div>
-    <div class="prog-track"><div id="bf-bar"></div></div>
-  </div>
-  <div class="out" id="bf-out" style="margin-top:4px">
-    <div id="bf-status"></div>
-    <div class="parts" id="bf-found" style="margin-top:8px"></div>
-  </div>
-</div>
-
-<footer>
-  <span>made by <strong style="color:var(--text)">k0d</strong></span>
-  <div class="footer-r">
-    <a href="https://razvanttn.gitbook.io/ctf" target="_blank">writeups</a>
-    <span style="color:var(--border)">·</span>
-    <span>discord: razvanttn_</span>
-  </div>
-</footer>
-
-</div>
-<script>
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';try{return atob(s);}catch(e){return null;}}
-function b64e(s){return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
-function b64dBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';try{const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}catch(e){return null;}}
-function ts2date(b){try{const r=b64d(b);if(!r)return null;let n=0;for(let i=0;i<r.length;i++)n=n*256+r.charCodeAt(i);return new Date((n+new Date('2011-01-01T00:00:00Z').getTime()/1000)*1000).toISOString().replace('T',' ').slice(0,19)+' UTC';}catch(e){return null;}}
-function jhl(j){j=j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return j.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,m=>{let c='jn';if(/^"/.test(m))c=/:$/.test(m)?'jk':'js';else if(/true|false/.test(m))c='jb';else if(/null/.test(m))c='jz';return`<span class="${c}">${m}</span>`;});}
-
-function decodePayload(raw) {
-
-  const bytes = b64dBytes(raw);
-  if (!bytes) return {ok: false, html: '<span style="color:var(--red)">failed to decode base64</span>', type: 'unknown'};
-  
-  try {
-    const plain = new TextDecoder().decode(bytes);
-    const parsed = JSON.parse(plain);
-    return {ok: true, html: jhl(JSON.stringify(parsed, null, 2)), type: 'json'};
-  } catch(e) {}
-  
-
-  try {
-    const decompressed = pako.inflate(bytes, {to: 'string'});
-    const parsed = JSON.parse(decompressed);
-    return {ok: true, html: jhl(JSON.stringify(parsed, null, 2)), type: 'zlib'};
-  } catch(e) {}
-
-
-  try {
-    return {ok: true, html: esc(new TextDecoder().decode(bytes)), type: 'raw'};
-  } catch(e) {}
-
-  return {ok: false, html: '<span style="color:var(--red)">could not decode payload</span>', type: 'unknown'};
-}
-
-
-function parseCookie(raw) {
-  raw = raw.trim();
-  let compressed = false;
-  if (raw.startsWith('.')) {
-    compressed = true;
-    raw = raw.slice(1); // remove leading dot
-  }
-  const parts = raw.split('.');
-  return {parts, compressed};
-}
-
-function sw(name){
-  const ns=['decode','encode','verify','crack'];
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',ns[i]===name));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-}
-
-function vis(id,btn){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';btn.textContent=el.type==='password'?'show':'hide';}
-
-function cp(elId,btnId){
-  navigator.clipboard.writeText(document.getElementById(elId).textContent).then(()=>{
-    const b=document.getElementById(btnId);b.textContent='copied';b.classList.add('ok');
-    setTimeout(()=>{b.textContent='copy';b.classList.remove('ok');},2000);
-  });
-}
-
-function clr(inId,outId){document.getElementById(inId).value='';document.getElementById(outId).classList.remove('show');}
-
-function doDecode(){
-  const raw=document.getElementById('dec-in').value.trim();
-  const outEl=document.getElementById('dec-out');
-  const partsEl=document.getElementById('dec-parts');
-  if(!raw){alert('paste a cookie first');return;}
-
-  const {parts, compressed} = parseCookie(raw);
-  if(parts.length<2){partsEl.innerHTML=`<div class="box err">invalid format</div>`;outEl.classList.add('show');return;}
-
-  let html='';
-  const decoded = decodePayload(parts[0]);
-  const typeLabel = compressed ? 'payload (zlib)' : decoded.type === 'zlib' ? 'payload (zlib)' : 'payload';
-  html+=`<div class="part"><div class="part-h"><span style="color:#9cdcfe">${typeLabel}</span><span class="part-raw">${esc(parts[0].slice(0,36))}${parts[0].length>36?'…':''}</span></div><div class="part-b">${decoded.html}</div></div>`;
-
-  if(parts.length>=3){
-    const d=ts2date(parts[1]);
-    html+=`<div class="part"><div class="part-h"><span style="color:#4ec9b0">timestamp</span><span class="part-raw">${esc(parts[1])}</span></div><div class="part-b">${d||'<span style="color:var(--muted)">could not decode</span>'}</div></div>`;
-    const sig=parts.slice(2).join('.');
-    html+=`<div class="part"><div class="part-h"><span style="color:#ce9178">hmac-sha1</span><span class="part-raw">${esc(sig.slice(0,36))}${sig.length>36?'…':''}</span></div><div class="part-b" style="color:var(--muted)">verify with secret key → verify tab</div></div>`;
-  } else {
-    html+=`<div class="part"><div class="part-h"><span style="color:#ce9178">part 2</span></div><div class="part-b">${esc(parts[1])}</div></div>`;
-  }
-  partsEl.innerHTML=html;outEl.classList.add('show');
-}
-
-
-function doEncode(){
-  const ps=document.getElementById('enc-payload').value.trim();
-  const key=document.getElementById('enc-key').value;
-  const fmt=document.querySelector('input[name="enc-fmt"]:checked').value;
-  const outEl=document.getElementById('enc-out');
-  const box=document.getElementById('enc-box');
-  if(!ps){alert('enter a json payload');return;}
-  if(!key){alert('enter a secret key');return;}
-  let payload;
-  try{payload=JSON.parse(ps);}catch(e){box.textContent='invalid json: '+e.message;box.className='box err';outEl.classList.add('show');return;}
-  try{
-    const EPOCH=new Date('2011-01-01T00:00:00Z').getTime()/1000;
-    let ts=Math.floor(Date.now()/1000)-EPOCH;
-    let tb=[];while(ts>0){tb.unshift(ts&0xff);ts>>=8;}
-    const tsb=b64e(String.fromCharCode(...tb));
-
-    let pb;
-    if(fmt==='compressed'){
-
-      const jsonBytes=new TextEncoder().encode(JSON.stringify(payload));
-      const compressed=pako.deflate(jsonBytes);
-      let bstr='';for(let i=0;i<compressed.length;i++)bstr+=String.fromCharCode(compressed[i]);
-      pb=b64e(bstr);
-      const sigBase=pb+'.'+tsb;
-      const sig=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)));
-      box.textContent='.'+pb+'.'+tsb+'.'+sig;
-    } else {
-      pb=b64e(JSON.stringify(payload));
-      const sigBase=pb+'.'+tsb;
-      const sig=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)));
-      box.textContent=pb+'.'+tsb+'.'+sig;
-    }
-    box.className='box ok';outEl.classList.add('show');
-  }catch(e){box.textContent='error: '+e.message;box.className='box err';outEl.classList.add('show');}
-}
-function clrEnc(){document.getElementById('enc-payload').value='';document.getElementById('enc-key').value='';document.getElementById('enc-out').classList.remove('show');}
-
-function doVerify(){
-  const rawInput=document.getElementById('ver-cookie').value.trim();
-  const key=document.getElementById('ver-key').value;
-  const outEl=document.getElementById('ver-out');
-  const statusEl=document.getElementById('ver-status');
-  const partsEl=document.getElementById('ver-parts');
-  if(!rawInput){alert('paste a cookie');return;}
-  if(!key){alert('enter a secret key');return;}
-
-  const {parts, compressed} = parseCookie(rawInput);
-  if(parts.length<3){statusEl.innerHTML=`<div class="badge err">✗ invalid format</div>`;partsEl.innerHTML='';outEl.classList.add('show');return;}
-
-  try{
-    const sigProvided=parts.slice(2).join('.');
-    const sigBase=parts[0]+'.'+parts[1];
-    const sigComputed=b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)));
-    const valid=sigComputed===sigProvided;
-    statusEl.innerHTML=valid?`<div class="badge ok">✓ valid — key matches</div>`:`<div class="badge err">✗ invalid — wrong key or tampered</div>`;
-    const decoded = decodePayload(parts[0]);
-    const det = decoded.ok ? `<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${decoded.html}</div></div>` : '';
-    partsEl.innerHTML=det;outEl.classList.add('show');
-  }catch(e){statusEl.innerHTML=`<div class="badge err">✗ ${esc(e.message)}</div>`;partsEl.innerHTML='';outEl.classList.add('show');}
-}
-function clrVer(){document.getElementById('ver-cookie').value='';document.getElementById('ver-key').value='';document.getElementById('ver-out').classList.remove('show');}
-
-const FB=['secret','secretkey','mysecretkey','changeme','admin','password','test','dev','flask','insecure'];
-let WL=[];
-fetch('https://gist.githubusercontent.com/razvanttn/885f3d5e84db23372ef9578561a82a1e/raw/4b24defb2259d313b5c48e2eccc02fc47e2bc77e/gistfile1.txt')
-  .then(r=>r.ok?r.text():Promise.reject())
-  .then(t=>{WL=cleanWl(t);const el=document.getElementById('bf-wl-label');if(el)el.textContent=`built-in wordlist (${WL.length.toLocaleString()} keys)`;})
-  .catch(()=>{WL=FB;const el=document.getElementById('bf-wl-label');if(el)el.textContent=`built-in wordlist (${FB.length} keys)`;});
-
-let bfRun=false,bfCustom=null;
-
-function cleanWl(raw){const s=new Set();for(let l of raw.split(/\r?\n/)){l=l.trim().replace(/^['"`]+|['"`]+$/g,'').trim();if(!l||l.startsWith('#')||l.startsWith('//')||l.startsWith('&')||l.startsWith('<')||l.includes('{0}')||l.includes('openssl rand'))continue;s.add(l);}return[...s];}
-function togWl(){document.getElementById('bf-upload').style.display=document.querySelector('input[name="bf-src"]:checked').value==='upload'?'block':'none';}
-function loadWl(input){const f=input.files[0];if(!f)return;document.getElementById('bf-file-lbl').textContent=`loading ${f.name}...`;const r=new FileReader();r.onload=e=>{bfCustom=cleanWl(e.target.result);document.getElementById('bf-file-lbl').textContent=`${f.name} — ${bfCustom.length.toLocaleString()} keys`;};r.readAsText(f);}
-
-async function startBf(){
-  const cookie=document.getElementById('bf-cookie').value.trim();
-  if(!cookie){alert('paste a cookie');return;}
-  const {parts} = parseCookie(cookie);
-  if(parts.length<3){alert('invalid cookie — needs 3 parts');return;}
-  const src=document.querySelector('input[name="bf-src"]:checked').value;
-  const wl=src==='upload'?bfCustom:WL;
-  if(!wl||!wl.length){alert('wordlist empty or not loaded');return;}
-  const sigBase=parts[0]+'.'+parts[1];
-  const sigGiven=parts.slice(2).join('.');
-  bfRun=true;
-  document.getElementById('bf-start').style.display='none';
-  document.getElementById('bf-stop').style.display='';
-  document.getElementById('bf-prog').style.display='block';
-  document.getElementById('bf-out').classList.add('show');
-  document.getElementById('bf-status').innerHTML=`<div class="badge run">running... 0 / ${wl.length.toLocaleString()}</div>`;
-  document.getElementById('bf-found').innerHTML='';
-  const total=wl.length;let found=null;const t0=Date.now();const CHUNK=500;
-  for(let i=0;i<total;i+=CHUNK){
-    if(!bfRun)break;
-    for(const key of wl.slice(i,i+CHUNK)){
-      if(b64e(CryptoJS.enc.Latin1.stringify(CryptoJS.HmacSHA1(sigBase,key)))===sigGiven){found=key;break;}
-    }
-    if(found!==null)break;
-    const done=Math.min(i+CHUNK,total);
-    const speed=Math.round(done/((Date.now()-t0)/1000));
-    document.getElementById('bf-bar').style.width=(done/total*100)+'%';
-    document.getElementById('bf-prog-lbl').textContent=`${done.toLocaleString()} / ${total.toLocaleString()}`;
-    document.getElementById('bf-speed').textContent=`${speed.toLocaleString()} keys/s`;
-    document.getElementById('bf-status').innerHTML=`<div class="badge run">running... ${done.toLocaleString()} / ${total.toLocaleString()}</div>`;
-    await new Promise(r=>setTimeout(r,0));
-  }
-  bfRun=false;
-  document.getElementById('bf-start').style.display='';
-  document.getElementById('bf-stop').style.display='none';
-  if(found!==null){
-    document.getElementById('bf-bar').style.width='100%';
-    document.getElementById('bf-status').innerHTML=`<div class="badge ok">✓ key found</div>`;
-    const decoded = decodePayload(parts[0]);
-    const ph = decoded.ok ? `<div class="part"><div class="part-h"><span style="color:#9cdcfe">payload</span></div><div class="part-b">${decoded.html}</div></div>` : '';
-    document.getElementById('bf-found').innerHTML=`<div class="part"><div class="part-h"><span style="color:var(--green)">SECRET_KEY</span><button class="cp" id="cp-bf" onclick="cpT('${esc(found)}','cp-bf')" style="margin-left:auto">copy</button></div><div class="part-b" style="color:var(--green)">${esc(found)||'(empty string)'}</div></div>${ph}`;
-  } else {
-    document.getElementById('bf-status').innerHTML=`<div class="badge err">✗ not found in wordlist</div>`;
-  }
-}
-function stopBf(){bfRun=false;}
-function clrBf(){
-  bfRun=false;
-  document.getElementById('bf-cookie').value='';
-  document.getElementById('bf-out').classList.remove('show');
-  document.getElementById('bf-prog').style.display='none';
-  document.getElementById('bf-bar').style.width='0%';
-  document.getElementById('bf-start').style.display='';
-  document.getElementById('bf-stop').style.display='none';
-  bfCustom=null;
-  document.getElementById('bf-file-lbl').textContent='no file chosen';
-  document.getElementById('bf-file').value='';
-  document.querySelector('input[name="bf-src"][value="builtin"]').checked=true;
-  document.getElementById('bf-upload').style.display='none';
-}
-function cpT(text,btnId){navigator.clipboard.writeText(text).then(()=>{const b=document.getElementById(btnId);if(!b)return;b.textContent='copied';b.classList.add('ok');setTimeout(()=>{b.textContent='copy';b.classList.remove('ok');},2000);});}
-</script>
+<script src="assets/script.js"></script>
 </body>
 </html>
