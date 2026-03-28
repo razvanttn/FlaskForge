@@ -2,18 +2,17 @@
 
 I built this because I couldn't find a single decent tool online that handles Flask session cookies properly — most decoders don't encode, most encoders don't verify, and none of them crack. So I made one that does all three.
 
+This tool runs lives at
+**[razvanttn.github.io/FlaskForge](https://razvanttn.github.io/FlaskForge)**
+
+![Presentation Gif](https://github.com/user-attachments/assets/88c05080-a0e3-4bbf-b3d6-d6350ea7338d)
+
 ## What it does
 
 - **Decode** — paste any Flask session cookie and see the JSON payload, timestamp, and signature breakdown instantly
 - **Encode** — craft a valid signed cookie from a JSON payload and your own SECRET_KEY
 - **Verify** — check if a SECRET_KEY matches a given cookie's signature
 - **Crack Token** — bruteforce weak secret keys against a 55k+ wordlist of common Flask secrets, runs entirely in your browser
-
-## Live
-
-**[razvanttn.github.io/FlaskForge](https://razvanttn.github.io/FlaskForge)**
-
-No install. No backend. Everything runs client-side.
 
 ## How Flask session cookies work
 
