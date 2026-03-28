@@ -5,7 +5,7 @@ I built this because I couldn't find a single decent tool online that handles Fl
 This tool runs live at
 **[razvanttn.github.io/FlaskForge](https://razvanttn.github.io/FlaskForge)**
 
-![Presentation Gif](https://github.com/user-attachments/assets/88c05080-a0e3-4bbf-b3d6-d6350ea7338d)
+<img src="https://github.com/user-attachments/assets/a3546415-2fa9-4b96-8696-9f7af98a0f0f" width="600" alt="demo"/>
 
 ## What it does
 
